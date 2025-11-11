@@ -29,12 +29,12 @@ namespace our {
             GLenum equation = GL_FUNC_ADD;
             GLenum sourceFactor = GL_SRC_ALPHA;
             GLenum destinationFactor = GL_ONE_MINUS_SRC_ALPHA;
-            glm::vec4 constantColor = {0, 0, 0, 0};
+            glm::vec4 constantColor = { 0, 0, 0, 0 };
         } blending;
 
         // These options specify the color and depth mask which can be used to
         // prevent the rendering/clearing from modifying certain channels of certain targets in the framebuffer
-        glm::bvec4 colorMask = {true, true, true, true}; // To know how to use it, check glColorMask
+        glm::bvec4 colorMask = { true, true, true, true }; // To know how to use it, check glColorMask
         bool depthMask = true; // To know how to use it, check glDepthMask
 
 
@@ -42,6 +42,35 @@ namespace our {
         // For example, if faceCulling.enabled is true, you should call glEnable(GL_CULL_FACE), otherwise, you should call glDisable(GL_CULL_FACE)
         void setup() const {
             //TODO: (Req 4) Write this function
+            if (faceCulling.enabled) {
+                glEnable(GL_CULL_FACE);
+                glCullFace(faceCulling.culledFace);
+                glFrontFace(faceCulling.frontFace);
+            }
+            else {
+                glDisable(GL_CULL_FACE);
+            }
+
+            if (depthTesting.enabled) {
+                glEnable(GL_DEPTH_TEST);
+                glDepthFunc(depthTesting.function);
+            }
+            else {
+                glDisable(GL_DEPTH_TEST);
+            }
+
+            if (blending.enabled) {
+                glEnable(GL_BLEND);
+                glBlendEquation(blending.equation);
+                glBlendFunc(blending.sourceFactor, blending.destinationFactor);
+                glBlendColor(blending.constantColor.r, blending.constantColor.g, blending.constantColor.b, blending.constantColor.a);
+            }
+            else {
+                glDisable(GL_BLEND);
+            }
+
+            glColorMask(colorMask.r, colorMask.g, colorMask.b, colorMask.a);
+            glDepthMask(depthMask);
         }
 
         // Given a json object, this function deserializes a PipelineState structure
