@@ -35,18 +35,20 @@ namespace our {
             static_assert(std::is_base_of<Component, T>::value, "T must inherit from Component");
             //TODO: (Req 8) Create an component of type T, set its "owner" to be this entity, then push it into the component's list
             // Don't forget to return a pointer to the new component
-			T* component = new T();
-			component->owner = this;
-			components.push_back(component);
-            return nullptr;
+		T* component = new T();
+		component->owner = this;
+		components.push_back(component);
+		return component;
         }
 
         // This template method searhes for a component of type T and returns a pointer to it
         // If no component of type T was found, it returns a nullptr 
         template<typename T>
         T* getComponent(){
-            //TODO: (Req 8) Go through the components list and find the first component that can be dynamically cast to "T*".
-            // Return the component you found, or return null of nothing was found.
+            // Go through the components list and find the first component that can be dynamically cast to "T*".
+            for(auto c : components){
+                if(auto casted = dynamic_cast<T*>(c)) return casted;
+            }
             return nullptr;
         }
 
@@ -99,7 +101,9 @@ namespace our {
 
         // Since the entity owns its components, they should be deleted alongside the entity
         ~Entity(){
-            //TODO: (Req 8) Delete all the components in "components".
+            // Delete all the components owned by this entity
+            for(auto c : components) delete c;
+            components.clear();
         }
 
         // Entities should not be copyable

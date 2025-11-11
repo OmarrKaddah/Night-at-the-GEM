@@ -1,6 +1,7 @@
 ﻿#include "forward-renderer.hpp"
 #include "../mesh/mesh-utils.hpp"
 #include "../texture/texture-utils.hpp"
+#include <iostream>
 
 namespace our {
 
@@ -54,14 +55,25 @@ namespace our {
 
         // Then we check if there is a postprocessing shader in the configuration
         if(config.contains("postprocess")){
-            //TODO: (Req 11) Create a framebuffer
+            // Create a framebuffer
+            glGenFramebuffers(1, &postprocessFrameBuffer);
+            glBindFramebuffer(GL_FRAMEBUFFER, postprocessFrameBuffer);
 
-            //TODO: (Req 11) Create a color and a depth texture and attach them to the framebuffer
-            // Hints: The color format can be (Red, Green, Blue and Alpha components with 8 bits for each channel).
-            // The depth format can be (Depth component with 24 bits).
-            
-            //TODO: (Req 11) Unbind the framebuffer just to be safe
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            // Create a color and a depth texture and attach them to the framebuffer
+            // Color: RGBA8, Depth: 24-bit depth
+            colorTarget = texture_utils::empty(GL_RGBA8, windowSize);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTarget->getOpenGLName(), 0);
+
+            depthTarget = texture_utils::empty(GL_DEPTH_COMPONENT24, windowSize);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTarget->getOpenGLName(), 0);
+
+            // Check framebuffer completeness
+            if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+                std::cerr << "ERROR: Postprocess framebuffer is not complete" << std::endl;
+            }
+
+            // Unbind the framebuffer just to be safe
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
             // Create a vertex array to use for drawing the texture
             glGenVertexArrays(1, &postProcessVertexArray);
@@ -170,8 +182,8 @@ namespace our {
 
         // If postprocessing enabled → render to framebuffer
         if (postprocessMaterial) {
-            // TODO (Req 11): Bind framebuffer before rendering scene
-            // glBindFramebuffer(GL_FRAMEBUFFER, postprocessFrameBuffer);
+            // Bind framebuffer before rendering scene
+            glBindFramebuffer(GL_FRAMEBUFFER, postprocessFrameBuffer);
         }
 
         // Clear color and depth
@@ -208,6 +220,13 @@ namespace our {
             // Transform = VP * model
             glm::mat4 transform = VP * model;
 
+            // Force the sky to be at the far plane by setting NDC z = 1 for all vertices.
+            // This is achieved by making the 3rd row of the transform equal to the 4th row
+            // so that gl_Position.z == gl_Position.w after the vertex shader transform.
+            for(int c = 0; c < 4; ++c){
+                transform[c][2] = transform[c][3];
+            }
+
             // Set transform uniform
             skyMaterial->shader->set("transform", transform);
 
@@ -235,17 +254,15 @@ namespace our {
 
         // === 8) Postprocessing (Req 11) ======================================
         if (postprocessMaterial) {
-            // TODO (Req 11): Unbind framebuffer (return to default)
-            // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            // Unbind framebuffer (return to default)
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            // TODO (Req 11): Setup postprocess material and draw fullscreen triangle
-            /*
+            // Setup postprocess material and draw fullscreen triangle
             postprocessMaterial->setup();
             postprocessMaterial->shader->use();
             glBindVertexArray(postProcessVertexArray);
             glDrawArrays(GL_TRIANGLES, 0, 3);
             glBindVertexArray(0);
-            */
         }
     }
 

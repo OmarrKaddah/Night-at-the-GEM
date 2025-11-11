@@ -12,8 +12,15 @@ our::Texture2D* our::texture_utils::empty(GLenum format, glm::ivec2 size){
     // Make sure pixel storage alignment won't cause issues
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     // Create empty image data (no data pointer)
-    // We use GL_RGBA as the external format and GL_UNSIGNED_BYTE as the type for simplicity
-    glTexImage2D(GL_TEXTURE_2D, 0, format, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    // Choose appropriate external format and type based on the internal format requested
+    GLenum externalFormat = GL_RGBA;
+    GLenum externalType = GL_UNSIGNED_BYTE;
+    // If the internal format is a depth format, use depth external format and unsigned int type
+    if(format == GL_DEPTH_COMPONENT || format == GL_DEPTH_COMPONENT16 || format == GL_DEPTH_COMPONENT24 || format == GL_DEPTH_COMPONENT32 || format == GL_DEPTH_COMPONENT32F){
+        externalFormat = GL_DEPTH_COMPONENT;
+        externalType = GL_UNSIGNED_INT;
+    }
+    glTexImage2D(GL_TEXTURE_2D, 0, format, size.x, size.y, 0, externalFormat, externalType, nullptr);
     // Set reasonable parameters for framebuffer textures (no interpolation)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

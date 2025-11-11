@@ -12,11 +12,10 @@ out vec4 frag_color;
 // to grab the attention of the viewer towards the center of the screen
 
 void main(){
-    //TODO: Modify this shader to apply vignette
-    // To apply vignette, divide the scene color
-    // by 1 + the squared length of the 2D pixel location the NDC space
-    // Hint: remember that the NDC space ranges from -1 to 1
-    // while the texture coordinate space ranges from 0 to 1
-    // We have the pixel's texture coordinate, how can we compute its location in the NDC space?
-    frag_color = texture(tex, tex_coord);    
+    // Compute NDC position from texture coord (0..1 -> -1..1)
+    vec2 ndc = tex_coord * 2.0 - vec2(1.0);
+    float len2 = dot(ndc, ndc);
+    vec4 color = texture(tex, tex_coord);
+    // Divide the scene color by (1 + len^2) to darken corners
+    frag_color = color / (1.0 + len2);
 }
