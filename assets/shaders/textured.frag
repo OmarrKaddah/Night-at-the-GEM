@@ -9,9 +9,14 @@ out vec4 frag_color;
 
 uniform vec4 tint;
 uniform sampler2D tex;
+uniform float alphaThreshold;
 
 void main(){
     //TODO: (Req 7) Modify the following line to compute the fragment color
-    // by multiplying the tint with the vertex color and with the texture color 
-    frag_color = vec4(1.0);
+    //vec4 tex_color = texture(tex, fs_in.tex_coord);
+    //vec4 final_color = fs_in.color * tex_color * tint;
+    //if(final_color.a < alphaThreshold)
+      //  discard;
+    //frag_color = final_color;
+    frag_color = texture(tex, fs_in.tex_coord) * tint * fs_in.color;
 }
