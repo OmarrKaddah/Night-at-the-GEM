@@ -27,6 +27,7 @@ bool our::ShaderProgram::attach(const std::string& filename, GLenum type) const 
     glShaderSource(shader, 1, &sourceCStr, nullptr);
     glCompileShader(shader);
 
+
     std::string error = checkForShaderCompilationErrors(shader);
     if (!error.empty()) {
         std::cerr << "ERROR: Shader compilation failed for shader: " << filename << "\n" << error << std::endl;
