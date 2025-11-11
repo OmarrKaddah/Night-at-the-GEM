@@ -7,6 +7,9 @@ in Varyings {
     vec3 normal;
 } fs_in;
 
+
+
+
 out vec4 frag_color;
 
 uniform int output_type;
