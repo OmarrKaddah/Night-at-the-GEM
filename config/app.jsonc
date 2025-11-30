@@ -4,8 +4,8 @@
   "window": {
     "title": "Default Game Window",
     "size": {
-      "width": 1280,
-      "height": 720
+      "width": 2560,
+      "height": 1440
     },
     "fullscreen": false
   },
@@ -34,18 +34,15 @@
         "wood": "assets/textures/wood.jpg",
         "glass": "assets/textures/glass-panels.png",
         "monkey": "assets/textures/monkey.png",
-        "museum-armoury": "assets/textures/museum/Armoury0.jpg",
-        "museum-billiard": "assets/textures/museum/Billiard_Room0.jpg",
-        "museum-dining": "assets/textures/museum/Dining_Room0.jpg",
-        "museum-great": "assets/textures/museum/Great_Drawing_Room0.jpg",
-        "museum-morning": "assets/textures/museum/Morning_Room0.jpg",
-        "museum-porcelain": "assets/textures/museum/Porcelain_Room0.jpg",
-        "museum-serving": "assets/textures/museum/Serving_Room0.jpg",
-        "museum-small": "assets/textures/museum/Small_Drawing_Room0.jpg",
-        "museum-smoking": "assets/textures/museum/Smooking_Room0.jpg",
-        "museum-vestibule": "assets/textures/museum/Upper_Vestibule0.jpg",
         "hall-tex-1": "assets/textures/NHMHintzeHall02_Model_9_u1_v1_diffuse.jpeg",
-        "hall-tex-2": "assets/textures/NHMHintzeHall02_Model_9_u2_v1_diffuse.jpeg"
+        "hall-tex-2": "assets/textures/NHMHintzeHall02_Model_9_u2_v1_diffuse.jpeg",
+        "gun-tex-001": "assets/textures/gun/Image_6.png",
+        "gun-tex-004": "assets/textures/gun/Image_3.png",
+        "gun-tex-012": "assets/textures/gun/Image_9.png",
+        "gun-tex-013": "assets/textures/gun/Image_15.png",
+        "gun-tex-015": "assets/textures/gun/Image_12.png",
+        "gun-tex-017": "assets/textures/gun/Image_0.png"
+
 
 
       },
@@ -55,8 +52,9 @@
         "monkey": "assets/models/monkey.obj",
         "plane": "assets/models/plane.obj",
         "sphere": "assets/models/sphere.obj",
-        "museum": "assets/models/Museum.obj",
-        "hall": "assets/models/NHMHintzeHall01.obj"
+        "hall": "assets/models/NHMHintzeHall01.obj",
+        "gun": "assets/models/gun.obj"
+
 
 
       },
@@ -78,6 +76,79 @@
       },
 
       "materials": {
+
+        "Material.001": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-001",
+          "tint": [ 1, 1, 1, 1 ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": { "enabled": false },
+            "depthTesting": { "enabled": true }
+          }
+        },
+
+        "Material.004": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-004",
+          "tint": [ 1, 1, 1, 1 ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": { "enabled": false },
+            "depthTesting": { "enabled": true }
+          }
+        },
+
+        "Material.012": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-012",
+          "tint": [ 1, 1, 1, 1 ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": { "enabled": false },
+            "depthTesting": { "enabled": true }
+          }
+        },
+
+        "Material.013": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-013",
+          "tint": [ 1, 1, 1, 1 ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": { "enabled": false },
+            "depthTesting": { "enabled": true }
+          }
+        },
+
+        "Material.015": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-015",
+          "tint": [ 1, 1, 1, 1 ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": { "enabled": false },
+            "depthTesting": { "enabled": true }
+          }
+        },
+
+        "Material.017": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-017",
+          "tint": [ 1, 1, 1, 1 ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": { "enabled": false },
+            "depthTesting": { "enabled": true }
+          }
+        },
+
 
         "NHMHintzeHall02_Model_9_u1_v1": {
           "type": "textured",
@@ -179,6 +250,20 @@
           { "type": "Free Camera Controller" }
         ],
         "children": [
+          {
+            "name": "Gun",
+            "position": [ 0.35, -0.25, -0.6 ],
+            "rotation": [ 0, 0, 0 ],
+            "scale": [ 0.15, 0.15, 0.15 ],
+            "components": [
+              {
+                "type": "Mesh Renderer",
+                "mesh": "gun",
+                "material": "Material.001" // fallback only; submeshes override this
+              }
+            ]
+          }
+
 
         ]
       },
