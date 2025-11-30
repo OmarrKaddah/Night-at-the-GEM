@@ -25,7 +25,10 @@ our::Mesh* our::mesh_utils::loadOBJ(const std::string& filename) {
     std::vector<tinyobj::material_t> materials;
     std::string warn, err;
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str())) {
+    std::string obj_path = "assets/models/NHMHintzeHall01.obj";
+    std::string mtl_basepath = obj_path.substr(0, obj_path.find_last_of('/')) + "/";
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, obj_path.c_str(),mtl_basepath.c_str())) {
         std::cerr << "Failed to load obj file \"" << filename << "\" due to error: " << err << std::endl;
         return nullptr;
     }

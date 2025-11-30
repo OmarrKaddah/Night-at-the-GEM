@@ -38,6 +38,7 @@ namespace our {
 
         // This method binds this texture to GL_TEXTURE_2D
         void bind() const {
+			std::cerr << "Binding texture " << name << std::endl;
             glBindTexture(GL_TEXTURE_2D, name);
         }
 
