@@ -79,7 +79,7 @@
 
       "materials": {
 
-        "hall-flat": {
+        "NHMHintzeHall02_Model_9_u1_v1": {
           "type": "textured",
           "shader": "textured",
           "pipelineState": {
@@ -90,12 +90,17 @@
           "texture": "hall-tex-1",
           "sampler": "mipmap-linear"
         },
-
-
-
-
-
-
+        "NHMHintzeHall02_Model_9_u2_v1": {
+          "type": "textured",
+          "shader": "textured",
+          "pipelineState": {
+            "faceCulling": { "enabled": false },
+            "depthTesting": { "enabled": true }
+          },
+          "tint": [ 1, 1, 1, 1 ],
+          "texture": "hall-tex-2",
+          "sampler": "mipmap-linear"
+        },
 
         "metal": {
           "type": "tinted",
@@ -186,7 +191,7 @@
             {
               "type": "Mesh Renderer",
               "mesh": "hall",
-              "material": "hall-flat"
+              "material": "NHMHintzeHall02_Model_9_u1_v1"
             }
           ]
         }

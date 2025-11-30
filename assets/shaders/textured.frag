@@ -18,5 +18,8 @@ void main(){
     //if(final_color.a < alphaThreshold)
       //  discard;
     //frag_color = final_color;
-    frag_color = texture(tex, fs_in.tex_coord) * tint * fs_in.color;
+    //frag_color = texture(tex, fs_in.tex_coord) * tint * fs_in.color;
+    vec2 uv = fract(fs_in.tex_coord);
+    frag_color = texture(tex, uv) * tint * fs_in.color;
+
 }

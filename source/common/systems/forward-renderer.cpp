@@ -199,7 +199,48 @@ namespace our {
             cmd.material->shader->set("transform", transform);
 
             // Draw the mesh
-            cmd.mesh->draw();
+            //cmd.mesh->draw();
+            // MULTI-MATERIAL DRAWING
+            if (!cmd.mesh->submeshes.empty()) {
+                GLuint vao = cmd.mesh->getVAO();
+                glBindVertexArray(vao);
+
+                for (auto& sub : cmd.mesh->submeshes) {
+
+                    // Try material matching the .mtl name
+                    Material* matToUse = AssetLoader<Material>::get(sub.materialName);
+
+                    // If not found, fallback to the material set in JSON
+                    if (!matToUse) matToUse = cmd.material;
+                    if (!matToUse) continue;
+
+                    matToUse->setup();
+                    matToUse->shader->use();
+
+                    glm::mat4 transform = VP * cmd.localToWorld;
+                    matToUse->shader->set("transform", transform);
+
+                    glDrawElements(
+                        GL_TRIANGLES,
+                        sub.count,
+                        GL_UNSIGNED_INT,
+                        (void*)(sub.offset * sizeof(GLuint))
+                    );
+                }
+
+                glBindVertexArray(0);
+            }
+            else {
+                // Single-material mesh
+                cmd.material->setup();
+                cmd.material->shader->use();
+
+                glm::mat4 transform = VP * cmd.localToWorld;
+                cmd.material->shader->set("transform", transform);
+
+                cmd.mesh->draw();
+            }
+
         }
 
         // === 6) Draw sky (Req 10) ============================================
@@ -232,6 +273,7 @@ namespace our {
 
             // Draw sky sphere
             skySphere->draw();
+
         }
 
         // === 7) Draw transparent objects =====================================
@@ -245,7 +287,46 @@ namespace our {
 
             glm::mat4 transform = VP * cmd.localToWorld;
             cmd.material->shader->set("transform", transform);
-            cmd.mesh->draw();
+            // MULTI-MATERIAL DRAWING
+            if (!cmd.mesh->submeshes.empty()) {
+                GLuint vao = cmd.mesh->getVAO();
+                glBindVertexArray(vao);
+
+                for (auto& sub : cmd.mesh->submeshes) {
+
+                    // Try material matching the .mtl name
+                    Material* matToUse = AssetLoader<Material>::get(sub.materialName);
+
+                    // If not found, fallback to the material set in JSON
+                    if (!matToUse) matToUse = cmd.material;
+                    if (!matToUse) continue;
+
+                    matToUse->setup();
+                    matToUse->shader->use();
+
+                    glm::mat4 transform = VP * cmd.localToWorld;
+                    matToUse->shader->set("transform", transform);
+
+                    glDrawElements(
+                        GL_TRIANGLES,
+                        sub.count,
+                        GL_UNSIGNED_INT,
+                        (void*)(sub.offset * sizeof(GLuint))
+                    );
+                }
+
+                glBindVertexArray(0);
+            }
+            else {
+                // Single-material mesh
+                cmd.material->setup();
+                cmd.material->shader->use();
+
+                glm::mat4 transform = VP * cmd.localToWorld;
+                cmd.material->shader->set("transform", transform);
+
+                cmd.mesh->draw();
+            }
         }
 
         // Reset blend and depth state
