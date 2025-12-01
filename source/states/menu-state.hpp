@@ -44,8 +44,10 @@ class Menustate: public our::State {
     our::Mesh* rectangle;
     // A variable to record the time since the state is entered (it will be used for the fading effect).
     float time;
-    // An array of the button that we can interact with
-    std::array<Button, 2> buttons;
+    // An array of the button that we can interact with (now 3: Play, Options, Exit)
+    std::array<Button, 3> buttons;
+    // Normalized button rects (x, y, width, height) as fractions of the framebuffer size
+    glm::vec4 buttonNorms[3];
 
     void onInitialize() override {
         // First, we create a material for the menu's background
@@ -67,14 +69,13 @@ class Menustate: public our::State {
         highlightMaterial->shader->attach("assets/shaders/tinted.vert", GL_VERTEX_SHADER);
         highlightMaterial->shader->attach("assets/shaders/tinted.frag", GL_FRAGMENT_SHADER);
         highlightMaterial->shader->link();
-        // The tint is white since we will subtract the background color from it to create a negative effect.
-        highlightMaterial->tint = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-        // To create a negative effect, we enable blending, set the equation to be subtract,
-        // and set the factors to be one for both the source and the destination. 
+        // The tint controls the overlay color used when hovering a button. Use a soft warm color
+        // and alpha blending so the letters appear to "light up" when hovered.
+        highlightMaterial->tint = glm::vec4(1.0f, 0.92f, 0.6f, 0.45f);
         highlightMaterial->pipelineState.blending.enabled = true;
-        highlightMaterial->pipelineState.blending.equation = GL_FUNC_SUBTRACT;
-        highlightMaterial->pipelineState.blending.sourceFactor = GL_ONE;
-        highlightMaterial->pipelineState.blending.destinationFactor = GL_ONE;
+        highlightMaterial->pipelineState.blending.equation = GL_FUNC_ADD;
+        highlightMaterial->pipelineState.blending.sourceFactor = GL_SRC_ALPHA;
+        highlightMaterial->pipelineState.blending.destinationFactor = GL_ONE_MINUS_SRC_ALPHA;
 
         // Then we create a rectangle whose top-left corner is at the origin and its size is 1x1.
         // Note that the texture coordinates at the origin is (0.0, 1.0) since we will use the 
@@ -99,13 +100,28 @@ class Menustate: public our::State {
         // - The argument list () which is the arguments that the lambda should receive when it is called.
         //      We leave it empty since button actions receive no input.
         // - The body {} which contains the code to be executed. 
-        buttons[0].position = {830.0f, 607.0f};
-        buttons[0].size = {400.0f, 33.0f};
-        buttons[0].action = [this](){this->getApp()->changeState("play");};
+        // Define normalized button rects (fractions of the framebuffer).
+        // Adjust these values if the regions do not align perfectly with the image text.
+        // Format: { x_frac, y_frac, width_frac, height_frac } (top-left origin)
+        buttonNorms[0] = {0.43f, 0.43f, 0.106f, 0.07f}; // PLAY
+        buttonNorms[1] = {0.40f, 0.552f, 0.174f, 0.07f}; // OPTIONS
+        buttonNorms[2] = {0.435f, 0.675f, 0.095f, 0.07f}; // EXIT
 
-        buttons[1].position = {830.0f, 644.0f};
-        buttons[1].size = {400.0f, 33.0f};
-        buttons[1].action = [this](){this->getApp()->close();};
+        // Assign actions
+        buttons[0].action = [this](){ this->getApp()->changeState("play"); };
+        buttons[1].action = [this](){ std::cout << "Options selected" << std::endl; };
+        buttons[2].action = [this](){ this->getApp()->close(); };
+
+        // Convert normalized rects to pixel coordinates based on the current framebuffer size
+        glm::ivec2 fb = getApp()->getFrameBufferSize();
+        for(int i = 0; i < 3; ++i){
+            float x = buttonNorms[i].x * fb.x;
+            float y = buttonNorms[i].y * fb.y;
+            float w = buttonNorms[i].z * fb.x;
+            float h = buttonNorms[i].w * fb.y;
+            buttons[i].position = { x, y };
+            buttons[i].size = { w, h };
+        }
     }
 
     void onDraw(double deltaTime) override {
