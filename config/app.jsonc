@@ -244,7 +244,7 @@
       {
         "name": "PlayerCamera",
         "position": [ 0, 1.5, 10 ],
-        "rotation": [ 0, 0, 0 ],
+        "rotation": [ 0, 180, 0 ],
         "components": [
           { "type": "Camera" },
           { "type": "Free Camera Controller" }
@@ -254,7 +254,7 @@
             "name": "Gun",
             "position": [ 0.35, -0.25, -0.6 ],
             "rotation": [ 0, 0, 0 ],
-            "scale": [ 0.15, 0.15, 0.15 ],
+            "scale": [ 0.08, 0.08, 0.08 ],
             "components": [
               {
                 "type": "Mesh Renderer",
@@ -269,7 +269,7 @@
       },
       {
         "name": "Hall",
-        "position": [ 0, -1, -10 ],
+        "position": [ 0, 0.6, 18 ],
         "scale": [ 0.5, 0.5, 0.5 ],
         "rotation": [ -90, 0, 0 ],
         "components": [
