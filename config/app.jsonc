@@ -2,7 +2,7 @@
   "start-scene": "menu",
 
   "window": {
-    "title": "Default Game Window",
+    "title": "El Harb El 3alameya El Talta: Night at the Hintze Hall",
     "size": {
       "width": 2560,
       "height": 1440
@@ -268,18 +268,18 @@
         ]
       },
       {
-        
-          "name": "Hall",
-          "position": [ 0, -1, -10 ],
-          "scale": [ 0.5, 0.5, 0.5 ],
-          "components": [
-            {
-              "type": "Mesh Renderer",
-              "mesh": "hall",
-              "material": "NHMHintzeHall02_Model_9_u1_v1"
-            }
-          ]
+        "name": "Hall",
+        "position": [ 0, -1, -10 ],
+        "scale": [ 0.5, 0.5, 0.5 ],
+        "rotation": [ -90, 0, 0 ],
+        "components": [
+        {
+            "type": "Mesh Renderer",
+            "mesh": "hall",
+            "material": "NHMHintzeHall02_Model_9_u1_v1"
         }
+        ]
+      }
     ]
   }
 }
