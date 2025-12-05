@@ -1,285 +1,183 @@
 {
-  "start-scene": "menu",
-
-  "window": {
-    "title": "El Harb El 3alameya El Talta: Night at the Hintze Hall",
-    "size": {
-      "width": 2560,
-      "height": 1440
+    "start-scene": "menu",
+    "window":
+    {
+        "title":"Default Game Window",
+        "size":{
+            "width":1280,
+            "height":720
+        },
+        "fullscreen": false
     },
-    "fullscreen": false
-  },
-
-  "scene": {
-    "renderer": {
-      "sky": "assets/textures/sky.jpg",
-      "postprocess": "assets/shaders/postprocess/vignette.frag"
-    },
-
-    "assets": {
-      "shaders": {
-        "tinted": {
-          "vs": "assets/shaders/tinted.vert",
-          "fs": "assets/shaders/tinted.frag"
+    "scene": {
+        "renderer":{
+            "sky": "assets/textures/sky.jpg",
+            "postprocess": "assets/shaders/postprocess/vignette.frag"
         },
-        "textured": {
-          "vs": "assets/shaders/textured.vert",
-          "fs": "assets/shaders/textured.frag"
-        }
-      },
-
-      "textures": {
-        "moon": "assets/textures/moon.jpg",
-        "grass": "assets/textures/grass_ground_d.jpg",
-        "wood": "assets/textures/wood.jpg",
-        "glass": "assets/textures/glass-panels.png",
-        "monkey": "assets/textures/monkey.png",
-        "hall-tex-1": "assets/textures/NHMHintzeHall02_Model_9_u1_v1_diffuse.jpeg",
-        "hall-tex-2": "assets/textures/NHMHintzeHall02_Model_9_u2_v1_diffuse.jpeg",
-        "gun-tex-001": "assets/textures/gun/Image_6.png",
-        "gun-tex-004": "assets/textures/gun/Image_3.png",
-        "gun-tex-012": "assets/textures/gun/Image_9.png",
-        "gun-tex-013": "assets/textures/gun/Image_15.png",
-        "gun-tex-015": "assets/textures/gun/Image_12.png",
-        "gun-tex-017": "assets/textures/gun/Image_0.png"
-
-
-
-      },
-
-      "meshes": {
-        "cube": "assets/models/cube.obj",
-        "monkey": "assets/models/monkey.obj",
-        "plane": "assets/models/plane.obj",
-        "sphere": "assets/models/sphere.obj",
-        "hall": "assets/models/NHMHintzeHall01.obj",
-        "gun": "assets/models/gun.obj"
-
-
-
-      },
-
-      "samplers": {
-        "default": {},
-        "pixelated": { "MAG_FILTER": "GL_NEAREST" },
-        "anisotropic": {
-          "MIN_FILTER": "GL_LINEAR_MIPMAP_LINEAR",
-          "MAG_FILTER": "GL_LINEAR",
-          "MAX_ANISOTROPY": 16
-        },
-        "mipmap-linear": {
-          "MIN_FILTER": "GL_LINEAR_MIPMAP_LINEAR",
-          "MAG_FILTER": "GL_LINEAR"
-        }
-
-
-      },
-
-      "materials": {
-
-        "Material.001": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-001",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-        "Material.004": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-004",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-        "Material.012": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-012",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-        "Material.013": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-013",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-        "Material.015": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-015",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-        "Material.017": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-017",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-
-        "NHMHintzeHall02_Model_9_u1_v1": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [ 1, 1, 1, 1 ],
-          "texture": "hall-tex-1",
-          "sampler": "mipmap-linear"
-        },
-        "NHMHintzeHall02_Model_9_u2_v1": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [ 1, 1, 1, 1 ],
-          "texture": "hall-tex-2",
-          "sampler": "mipmap-linear"
-        },
-
-        "metal": {
-          "type": "tinted",
-          "shader": "tinted",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [ 0.45, 0.4, 0.5, 1 ]
-        },
-
-        "glass": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true },
-            "blending": {
-              "enabled": true,
-              "sourceFactor": "GL_SRC_ALPHA",
-              "destinationFactor": "GL_ONE_MINUS_SRC_ALPHA"
+        "assets":{
+            "shaders":{
+                "tinted":{
+                    "vs":"assets/shaders/tinted.vert",
+                    "fs":"assets/shaders/tinted.frag"
+                },
+                "textured":{
+                    "vs":"assets/shaders/textured.vert",
+                    "fs":"assets/shaders/textured.frag"
+                }
             },
-            "depthMask": false
-          },
-          "transparent": true,
-          "tint": [ 1, 1, 1, 1 ],
-          "texture": "glass",
-          "sampler": "pixelated"
+            "textures":{
+                "moon": "assets/textures/moon.jpg",
+                "grass": "assets/textures/grass_ground_d.jpg",
+                "wood": "assets/textures/wood.jpg",
+                "glass": "assets/textures/glass-panels.png",
+                "monkey": "assets/textures/monkey.png"
+            },
+            "meshes":{
+                "cube": "assets/models/cube.obj",
+                "monkey": "assets/models/monkey.obj",
+                "plane": "assets/models/plane.obj",
+                "sphere": "assets/models/sphere.obj"
+            },
+            "samplers":{
+                "default":{},
+                "pixelated":{
+                    "MAG_FILTER": "GL_NEAREST"
+                }
+            },
+            "materials":{
+                "metal":{
+                    "type": "tinted",
+                    "shader": "tinted",
+                    "pipelineState": {
+                        "faceCulling":{
+                            "enabled": false
+                        },
+                        "depthTesting":{
+                            "enabled": true
+                        }
+                    },
+                    "tint": [0.45, 0.4, 0.5, 1]
+                },
+                "glass":{
+                    "type": "textured",
+                    "shader": "textured",
+                    "pipelineState": {
+                        "faceCulling":{
+                            "enabled": false
+                        },
+                        "depthTesting":{
+                            "enabled": true
+                        },
+                        "blending":{
+                            "enabled": true,
+                            "sourceFactor": "GL_SRC_ALPHA",
+                            "destinationFactor": "GL_ONE_MINUS_SRC_ALPHA"
+                        },
+                        "depthMask": false
+                    },
+                    "transparent": true,
+                    "tint": [1, 1, 1, 1],
+                    "texture": "glass",
+                    "sampler": "pixelated"
+                },
+                "grass":{
+                    "type": "textured",
+                    "shader": "textured",
+                    "pipelineState": {
+                        "faceCulling":{
+                            "enabled": false
+                        },
+                        "depthTesting":{
+                            "enabled": true
+                        }
+                    },
+                    "tint": [1, 1, 1, 1],
+                    "texture": "grass",
+                    "sampler": "default"
+                },
+                "monkey":{
+                    "type": "textured",
+                    "shader": "textured",
+                    "pipelineState": {
+                        "faceCulling":{
+                            "enabled": false
+                        },
+                        "depthTesting":{
+                            "enabled": true
+                        }
+                    },
+                    "tint": [1, 1, 1, 1],
+                    "texture": "monkey",
+                    "sampler": "default"
+                },
+                "moon":{
+                    "type": "textured",
+                    "shader": "textured",
+                    "pipelineState": {
+                        "faceCulling":{
+                            "enabled": false
+                        },
+                        "depthTesting":{
+                            "enabled": true
+                        }
+                    },
+                    "tint": [1, 1, 1, 1],
+                    "texture": "moon",
+                    "sampler": "default"
+                }
+            }
         },
-
-        "grass": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [ 1, 1, 1, 1 ],
-          "texture": "grass",
-          "sampler": "default"
-        },
-
-        "monkey": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [ 1, 1, 1, 1 ],
-          "texture": "monkey",
-          "sampler": "default"
-        },
-
-        "moon": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [ 1, 1, 1, 1 ],
-          "texture": "moon",
-          "sampler": "default"
-        }
-      }
-    },
-
-    "world": [
-      {
-        "name": "PlayerCamera",
-        "position": [ 0, 1.5, 10 ],
-        "rotation": [ 0, 0, 0 ],
-        "components": [
-          { "type": "Camera" },
-          { "type": "Free Camera Controller" }
-        ],
-        "children": [
-          {
-            "name": "Gun",
-            "position": [ 0.35, -0.25, -0.6 ],
-            "rotation": [ 0, 0, 0 ],
-            "scale": [ 0.08, 0.08, 0.08 ],
-            "components": [
-              {
-                "type": "Mesh Renderer",
-                "mesh": "gun",
-                "material": "Material.001" // fallback only; submeshes override this
+        "world":[
+            {
+                "position": [0, 0, 10],
+                "components": [
+                    {
+                        "type": "Camera"
+                    },
+                    {
+                        "type": "Free Camera Controller"
+                    }
+                ],
+                "children": [
+                    {
+                        "position": [1, -1, -1],
+                        "rotation": [45, 45, 0],
+                        "scale": [0.1, 0.1, 1.0],
+                        "components": [
+                            {
+                                "type": "Mesh Renderer",
+                                "mesh": "cube",
+                                "material": "metal"
+                            }
+                        ]
+                    }
+                ]
+            },
+           
+            {
+                "position": [0, -1, 0],
+                "rotation": [-90, 0, 0],
+                "scale": [10, 10, 1],
+                "components": [
+                    {
+                        "type": "Mesh Renderer",
+                        "mesh": "plane",
+                        "material": "grass"
+                    }
+                ]
+            },
+            {
+                "name": "TestBox",
+                "position": [0, -1, 0],
+                "rotation": [-90, 0, 0],
+                "scale": [10, 10, 1],
+                "components": [
+                  { "type": "Mesh Renderer", "mesh": "cube", "material": "glass" },
+                  { "type": "Collider", "halfSize": [1, 1, 1] }
+                ]
               }
-            ]
-          }
 
-
+            
         ]
-      },
-      {
-        "name": "Hall",
-        "position": [ 0, 0.6, 18 ],
-        "scale": [ 0.5, 0.5, 0.5 ],
-        "rotation": [ -90, 0, 0 ],
-        "components": [
-        {
-            "type": "Mesh Renderer",
-            "mesh": "hall",
-            "material": "NHMHintzeHall02_Model_9_u1_v1"
-        }
-        ]
-      }
-    ]
-  }
+    }
 }

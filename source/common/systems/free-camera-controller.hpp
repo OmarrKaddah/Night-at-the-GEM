@@ -10,6 +10,10 @@
 #include <glm/gtc/constants.hpp>
 #include <glm/trigonometric.hpp>
 #include <glm/gtx/fast_trigonometry.hpp>
+#include "../components/collider.hpp"
+#include "../ecs/aabb.hpp"
+#include <iostream>
+
 
 namespace our
 {
@@ -85,19 +89,74 @@ namespace our
                       right = glm::vec3(matrix * glm::vec4(1, 0, 0, 0));
 
             glm::vec3 current_sensitivity = controller->positionSensitivity;
+            // Copy current position to a temp value (desired position)
+            glm::vec3 desiredPosition = position;
+
             // If the LEFT SHIFT key is pressed, we multiply the position sensitivity by the speed up factor
+
+
             if(app->getKeyboard().isPressed(GLFW_KEY_LEFT_SHIFT)) current_sensitivity *= controller->speedupFactor;
+
+
+
 
             // We change the camera position based on the keys WASD/QE
             // S & W moves the player back and forth
-            if(app->getKeyboard().isPressed(GLFW_KEY_W)) position += front * (deltaTime * current_sensitivity.z);
-            if(app->getKeyboard().isPressed(GLFW_KEY_S)) position -= front * (deltaTime * current_sensitivity.z);
+            std::cout << "Current Position: (" << position.x << ", " << position.y << ", " << position.z << ")\n";
+            
+            if(app->getKeyboard().isPressed(GLFW_KEY_W)) {
+                std::cout << "Moving Forward\n";
+                desiredPosition  += front * (deltaTime * current_sensitivity.z);
+            }
+            if(app->getKeyboard().isPressed(GLFW_KEY_S)){
+                std::cout << "Moving Backward\n";
+                 desiredPosition  -= front * (deltaTime * current_sensitivity.z);
+            }
             // Q & E moves the player up and down
-            if(app->getKeyboard().isPressed(GLFW_KEY_Q)) position += up * (deltaTime * current_sensitivity.y);
-            if(app->getKeyboard().isPressed(GLFW_KEY_E)) position -= up * (deltaTime * current_sensitivity.y);
+            if(app->getKeyboard().isPressed(GLFW_KEY_Q)) desiredPosition  += up * (deltaTime * current_sensitivity.y);
+            if(app->getKeyboard().isPressed(GLFW_KEY_E)) desiredPosition  -= up * (deltaTime * current_sensitivity.y);
             // A & D moves the player left or right 
-            if(app->getKeyboard().isPressed(GLFW_KEY_D)) position += right * (deltaTime * current_sensitivity.x);
-            if(app->getKeyboard().isPressed(GLFW_KEY_A)) position -= right * (deltaTime * current_sensitivity.x);
+            if(app->getKeyboard().isPressed(GLFW_KEY_D)) desiredPosition  += right * (deltaTime * current_sensitivity.x);
+            if(app->getKeyboard().isPressed(GLFW_KEY_A)) desiredPosition  -= right * (deltaTime * current_sensitivity.x);
+
+
+
+
+
+            // PLAYER COLLISION AABB
+            glm::vec3 playerHalfSize = glm::vec3(0.4f, 1.0f, 0.4f); // adjust if needed
+
+            AABB playerBox;
+            playerBox.min = desiredPosition - playerHalfSize;
+            playerBox.max = desiredPosition + playerHalfSize;
+
+            // Check collision with environment colliders
+            bool colliding = false;
+
+            for(auto entity : world->getEntities()) {
+
+                if(auto col = entity->getComponent<our::ColliderComponent>()) {
+
+                    // Get world position of the collider entity
+                    glm::vec3 ep = glm::vec3(entity->getLocalToWorldMatrix()[3]);
+
+                    AABB other;
+                    other.min = ep - col->halfSize;
+                    other.max = ep + col->halfSize;
+
+                    if(playerBox.intersects(other)) {
+                        std::cout << "Collision detected!" << std::endl;
+                        colliding = true;
+                        break;
+                    }
+                }
+            }
+
+            // Apply movement only if valid
+            if(!colliding) {
+                position = desiredPosition;
+            }
+
         }
 
         // When the state exits, it should call this function to ensure the mouse is unlocked
