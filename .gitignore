@@ -8,8 +8,14 @@ bin/
 # imgui saved state
 imgui.ini
 
+# Asset files
+*.png
+*.jpg
+*.jpeg
+*.obj
+
 # Since ".obj" are ignored by default, we force them to be added
-!assets/models/**/*.obj
+# !assets/models/**/*.obj
 
 # Visual Studio specific files
 CMakeSettings.json
