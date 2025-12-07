@@ -66,4 +66,93 @@ namespace our {
         sampler = AssetLoader<Sampler>::get(data.value("sampler", ""));
     }
 
+    // LitMaterial setup - binds all texture maps to their units
+    void LitMaterial::setup() const {
+        Material::setup();
+        
+        // Set tint/fallback uniforms
+        shader->set("material.albedo", albedo_tint);
+        shader->set("material.specular", specular_tint);
+        shader->set("material.emissive", emissive_tint);
+        shader->set("material.roughness", roughness);
+        shader->set("material.ao", ao);
+        
+        // Bind textures to units 0-4
+        // Unit 0: Albedo
+        glActiveTexture(GL_TEXTURE0);
+        if (albedo_map) {
+            albedo_map->bind();
+            shader->set("material.use_albedo_map", 1);
+        } else {
+            shader->set("material.use_albedo_map", 0);
+        }
+        if (sampler) sampler->bind(0);
+        shader->set("material.albedo_map", 0);
+        
+        // Unit 1: Specular
+        glActiveTexture(GL_TEXTURE1);
+        if (specular_map) {
+            specular_map->bind();
+            shader->set("material.use_specular_map", 1);
+        } else {
+            shader->set("material.use_specular_map", 0);
+        }
+        if (sampler) sampler->bind(1);
+        shader->set("material.specular_map", 1);
+        
+        // Unit 2: Roughness
+        glActiveTexture(GL_TEXTURE2);
+        if (roughness_map) {
+            roughness_map->bind();
+            shader->set("material.use_roughness_map", 1);
+        } else {
+            shader->set("material.use_roughness_map", 0);
+        }
+        if (sampler) sampler->bind(2);
+        shader->set("material.roughness_map", 2);
+        
+        // Unit 3: Ambient Occlusion
+        glActiveTexture(GL_TEXTURE3);
+        if (ao_map) {
+            ao_map->bind();
+            shader->set("material.use_ao_map", 1);
+        } else {
+            shader->set("material.use_ao_map", 0);
+        }
+        if (sampler) sampler->bind(3);
+        shader->set("material.ao_map", 3);
+        
+        // Unit 4: Emissive
+        glActiveTexture(GL_TEXTURE4);
+        if (emissive_map) {
+            emissive_map->bind();
+            shader->set("material.use_emissive_map", 1);
+        } else {
+            shader->set("material.use_emissive_map", 0);
+        }
+        if (sampler) sampler->bind(4);
+        shader->set("material.emissive_map", 4);
+        
+        glActiveTexture(GL_TEXTURE0);
+    }
+
+    void LitMaterial::deserialize(const nlohmann::json& data) {
+        Material::deserialize(data);
+        if (!data.is_object()) return;
+        
+        // Load texture maps
+        albedo_map = AssetLoader<Texture2D>::get(data.value("albedo_map", ""));
+        specular_map = AssetLoader<Texture2D>::get(data.value("specular_map", ""));
+        roughness_map = AssetLoader<Texture2D>::get(data.value("roughness_map", ""));
+        ao_map = AssetLoader<Texture2D>::get(data.value("ao_map", ""));
+        emissive_map = AssetLoader<Texture2D>::get(data.value("emissive_map", ""));
+        sampler = AssetLoader<Sampler>::get(data.value("sampler", ""));
+        
+        // Load tints/fallbacks
+        albedo_tint = data.value("albedo", glm::vec3(1.0f));
+        specular_tint = data.value("specular", glm::vec3(0.5f));
+        emissive_tint = data.value("emissive", glm::vec3(0.0f));
+        roughness = data.value("roughness", 0.5f);
+        ao = data.value("ao", 1.0f);
+    }
 }

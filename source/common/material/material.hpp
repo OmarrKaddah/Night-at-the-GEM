@@ -53,6 +53,29 @@ namespace our {
         void deserialize(const nlohmann::json& data) override;
     };
 
+    // Lit material for objects that receive lighting
+    // Supports multiple texture maps for realistic rendering
+    class LitMaterial : public Material {
+    public:
+        // Texture maps (all optional - use tints as fallback)
+        Texture2D* albedo_map = nullptr;      // Base color
+        Texture2D* specular_map = nullptr;    // Specular reflectivity
+        Texture2D* roughness_map = nullptr;   // Surface roughness
+        Texture2D* ao_map = nullptr;          // Ambient occlusion
+        Texture2D* emissive_map = nullptr;    // Self-illumination
+        Sampler* sampler = nullptr;
+        
+        // Fallback values when textures aren't provided
+        glm::vec3 albedo_tint = glm::vec3(1.0f);
+        glm::vec3 specular_tint = glm::vec3(0.5f);
+        glm::vec3 emissive_tint = glm::vec3(0.0f);
+        float roughness = 0.5f;
+        float ao = 1.0f;
+
+        void setup() const override;
+        void deserialize(const nlohmann::json& data) override;
+    };
+
     // This function returns a new material instance based on the given type
     inline Material* createMaterialFromType(const std::string& type){
         if(type == "tinted"){
