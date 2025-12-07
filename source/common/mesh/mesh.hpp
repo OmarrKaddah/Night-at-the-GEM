@@ -18,6 +18,9 @@ namespace our {
         GLsizei elementCount;
 
     public:
+        // Store mesh data for physics collision
+        std::vector<Vertex> vertices;
+        std::vector<unsigned int> elements;
 
         struct Submesh {
             GLuint offset;            // starting index in EBO
@@ -33,6 +36,7 @@ namespace our {
         GLsizei& getElementCount() { return elementCount; }
 
         Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& elements)
+            : vertices(vertices), elements(elements)
         {
             elementCount = static_cast<GLsizei>(elements.size());
             glGenVertexArrays(1, &VAO);

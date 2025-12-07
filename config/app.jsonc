@@ -243,11 +243,20 @@
     "world": [
       {
         "name": "PlayerCamera",
-        "position": [ 0, 1.5, 10 ],
+        "position": [ 0, 2.0, 10 ],
         "rotation": [ 0, 0, 0 ],
         "components": [
           { "type": "Camera" },
-          { "type": "Free Camera Controller" }
+          { "type": "Movement",
+            "linearVelocity": [0, 0, 0]
+          },
+          {
+            "type": "Bullet Collider",
+            "shape": "capsule",
+            "size": [ 0.2, 0.7, 0.2 ],
+            "mass": 1.0,
+            "friction": 0.1
+          }
         ],
         "children": [
           {
@@ -260,11 +269,16 @@
                 "type": "Mesh Renderer",
                 "mesh": "gun",
                 "material": "Material.001" // fallback only; submeshes override this
+              },
+              {
+                "type": "Bullet Collider",
+                "shape": "box",
+                "size": [ 0.1, 0.1, 0.3 ],
+                "mass": 0.5,
+                "friction": 0.5
               }
             ]
           }
-
-
         ]
       },
       {
@@ -273,11 +287,17 @@
         "scale": [ 0.5, 0.5, 0.5 ],
         "rotation": [ -90, 0, 0 ],
         "components": [
-        {
+          {
             "type": "Mesh Renderer",
             "mesh": "hall",
             "material": "NHMHintzeHall02_Model_9_u1_v1"
-        }
+          },
+          {
+            "type": "Bullet Collider",
+            "shape": "mesh",
+            "mesh": "hall",
+            "mass": 0
+          }
         ]
       }
     ]
