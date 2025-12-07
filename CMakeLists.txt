@@ -20,6 +20,15 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)           # Don't build Installation I
 set(GLFW_USE_HYBRID_HPG ON CACHE BOOL "" FORCE)     # Add variables to use High Performance Graphics Card if available
 add_subdirectory(vendor/glfw)                       # Build the GLFW project to use later as a library
 
+# Bullet Physics - compile as source files to avoid CMake incompatibility
+file(GLOB_RECURSE BULLET_SOURCES 
+    vendor/bullet3/src/LinearMath/*.cpp
+    vendor/bullet3/src/BulletCollision/*/*.cpp
+    vendor/bullet3/src/BulletCollision/*/*/*.cpp
+    vendor/bullet3/src/BulletDynamics/*/*.cpp
+    vendor/bullet3/src/BulletDynamics/*/*/*.cpp
+)
+
 # A variable with all the source files of GLAD
 set(GLAD_SOURCE vendor/glad/src/gl.c)
 # A variables with all the source files of Dear ImGui
@@ -33,7 +42,7 @@ set(IMGUI_SOURCES
         )
 
 # Combine all vendor source files together into a single variable
-set(VENDOR_SOURCES ${GLAD_SOURCE} ${IMGUI_SOURCES})
+set(VENDOR_SOURCES ${GLAD_SOURCE} ${IMGUI_SOURCES} ${BULLET_SOURCES})
 
 # A variable with all our source files that are common between executable targets (examples)
 set(COMMON_SOURCES
@@ -83,10 +92,14 @@ set(COMMON_SOURCES
         source/common/components/free-camera-controller.cpp
         source/common/components/movement.hpp
         source/common/components/movement.cpp
+        source/common/components/bullet-collider.hpp
+        source/common/components/bullet-collider.cpp
         source/common/components/component-deserializer.hpp
 
         source/common/systems/forward-renderer.hpp
         source/common/systems/forward-renderer.cpp
+        source/common/systems/physics-system.hpp
+        source/common/systems/physics-system.cpp
         source/common/systems/free-camera-controller.hpp
         source/common/systems/movement.hpp
 )
@@ -99,6 +112,7 @@ include_directories(
         vendor/glm
         vendor/imgui
         vendor/utils
+        vendor/bullet3/src
 )
 
 
@@ -140,4 +154,3 @@ set_target_properties(GAME_APPLICATION PROPERTIES
     VS_DEBUGGER_COMMAND "${EXE_PATH}"
     VS_DEBUGGER_WORKING_DIRECTORY "${WORK_DIR}"
 )
-

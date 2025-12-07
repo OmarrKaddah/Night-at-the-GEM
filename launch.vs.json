@@ -5,7 +5,15 @@
     {
       "type": "default",
       "project": "CMakeLists.txt",
-      "projectTarget": "GAME_APPLICATION.exe (C:\\university\\Fall 2025\\Computer Graphics\\Project\\CMPS346 Project - Student Version\\bin\\GAME_APPLICATION.exe)",
+      "projectTarget": "GAME_APPLICATION.exe",
+      "name": "Run Game (Default)",
+      "args": [ "-c=config/app.jsonc" ],
+      "currentDir": "${workspaceRoot}"
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "GAME_APPLICATION.exe",
       "name": "Run Shader Test",
       "args": [ "-c=config/shader-test/test-5.jsonc" ],
       "currentDir": "."
