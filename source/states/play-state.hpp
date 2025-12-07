@@ -46,6 +46,7 @@ class Playstate: public our::State {
         
         // Lock mouse on startup
         static bool mouse_locked = false;
+        static bool first_frame = true;
         if(!mouse_locked){
             mouse.lockMouse(getApp()->getWindow());
             mouse_locked = true;
@@ -56,6 +57,11 @@ class Playstate: public our::State {
             if(collider && collider->mass > 0.0f && collider->rigidBody) {
                 // Handle mouse rotation (always active now)
                 glm::vec2 delta = mouse.getMouseDelta();
+                // Skip the first frame to ignore initial mouse position
+                if(first_frame) {
+                    delta = glm::vec2(0.0f);
+                    first_frame = false;
+                }
                 glm::vec3 rotation = entity->localTransform.rotation;
                 rotation.x -= delta.y * 0.01f;
                 rotation.y -= delta.x * 0.01f;
