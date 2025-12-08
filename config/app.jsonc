@@ -77,6 +77,29 @@
 
       "materials": {
 
+
+
+
+
+        "lambert4SG": {
+            "type": "textured",
+            "shader": "textured",
+            "pipelineState": {
+              "faceCulling": { "enabled": false },
+              "depthTesting": { "enabled": true },
+              "blending": {
+                "enabled": true,
+                "sourceFactor": "GL_SRC_ALPHA",
+                "destinationFactor": "GL_ONE_MINUS_SRC_ALPHA"
+              },
+              "depthMask": false
+            },
+            "transparent": true,
+            "texture": "glass",
+            "sampler": "pixelated"
+          },
+
+
         "Material.001": {
           "type": "textured",
           "shader": "textured",
