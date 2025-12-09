@@ -55,7 +55,9 @@ class Playstate: public our::State {
         
         for(auto entity : world.getEntities()){
             auto* collider = entity->getComponent<our::BulletColliderComponent>();
-            if(collider && collider->mass > 0.0f && collider->rigidBody) {
+            auto* camera = entity->getComponent<our::CameraComponent>();
+            // Only apply mouse rotation to entities with a camera
+            if(collider && collider->mass > 0.0f && collider->rigidBody && camera) {
                 // Handle mouse rotation (always active now)
                 glm::vec2 delta = mouse.getMouseDelta();
                 // Skip the first frame to ignore initial mouse position
