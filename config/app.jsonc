@@ -25,6 +25,10 @@
         "textured": {
           "vs": "assets/shaders/textured.vert",
           "fs": "assets/shaders/textured.frag"
+        },
+        "lit": {
+          "vs": "assets/shaders/lit.vert",
+          "fs": "assets/shaders/lit.frag"
         }
       },
 
@@ -41,7 +45,22 @@
         "gun-tex-012": "assets/textures/gun/Image_9.png",
         "gun-tex-013": "assets/textures/gun/Image_15.png",
         "gun-tex-015": "assets/textures/gun/Image_12.png",
-        "gun-tex-017": "assets/textures/gun/Image_0.png"
+        "gun-tex-017": "assets/textures/gun/Image_0.png",
+        "zombie-albedo-1": "assets/textures/zombie/1/2_Albedo.tga",
+        "zombie-emission-1": "assets/textures/zombie/1/2_Emission.tga",
+        "zombie-metallic-1": "assets/textures/zombie/1/2_Metallic.tga",
+        "zombie-normal-1": "assets/textures/zombie/1/2_Normal.tga",
+        "zombie-occlusion-1": "assets/textures/zombie/1/2_Occlusion.tga",
+        "zombie-albedo-2": "assets/textures/zombie/2/1_Albedo.tga",
+        "zombie-emission-2": "assets/textures/zombie/2/1_Emission.tga",
+        "zombie-metallic-2": "assets/textures/zombie/2/1_Metallic.tga",
+        "zombie-normal-2": "assets/textures/zombie/2/1_Normal.tga",
+        "zombie-occlusion-2": "assets/textures/zombie/2/1_Occlusion.tga",
+        "zombie-albedo-3": "assets/textures/zombie/3/1_Albedo.tga",
+        "zombie-emission-3": "assets/textures/zombie/3/1_Emission.tga",
+        "zombie-metallic-3": "assets/textures/zombie/3/1_Metallic.tga",
+        "zombie-normal-3": "assets/textures/zombie/3/1_Normal.tga",
+        "zombie-occlusion-3": "assets/textures/zombie/3/1_Occlusion.tga"
 
 
 
@@ -53,7 +72,8 @@
         "plane": "assets/models/plane.obj",
         "sphere": "assets/models/sphere.obj",
         "hall": "assets/models/NHMHintzeHall01.obj",
-        "gun": "assets/models/gun.obj"
+        "gun": "assets/models/gun.obj",
+        "zombie": "assets/models/zombie.obj"
 
 
 
@@ -76,6 +96,29 @@
       },
 
       "materials": {
+
+
+
+
+
+        "lambert4SG": {
+            "type": "textured",
+            "shader": "textured",
+            "pipelineState": {
+              "faceCulling": { "enabled": false },
+              "depthTesting": { "enabled": true },
+              "blending": {
+                "enabled": true,
+                "sourceFactor": "GL_SRC_ALPHA",
+                "destinationFactor": "GL_ONE_MINUS_SRC_ALPHA"
+              },
+              "depthMask": false
+            },
+            "transparent": true,
+            "texture": "glass",
+            "sampler": "pixelated"
+          },
+
 
         "Material.001": {
           "type": "textured",
@@ -173,6 +216,50 @@
           "sampler": "mipmap-linear"
         },
 
+        "zombie-material-1": {
+          "type": "textured",
+          "shader": "textured",
+          "pipelineState": {
+            "faceCulling": { "enabled": true, "culledFace": "GL_BACK" },
+            "depthTesting": { "enabled": true }
+          },
+          "tint": [1, 1, 1, 1],
+          "texture": "zombie-albedo-1",
+          "sampler": "default"
+        },
+
+        "zombie-material-2": {
+          "type": "textured",
+          "shader": "textured",
+          "pipelineState": {
+            "faceCulling": { "enabled": true, "culledFace": "GL_BACK" },
+            "depthTesting": { "enabled": true }
+          },
+          "tint": [1, 1, 1, 1],
+          "texture": "zombie-albedo-2",
+          "sampler": "default"
+        },
+
+        "zombie-material-3": {
+          "type": "textured",
+          "shader": "textured",
+          "pipelineState": {
+            "faceCulling": { "enabled": true, "culledFace": "GL_BACK" },
+            "depthTesting": { "enabled": true }
+          },
+          "albedo_map": "zombie-albedo-3",
+          "emissive_map": "zombie-emission-3",
+          "specular_map": "zombie-metallic-3",
+          "roughness_map": "zombie-metallic-3",
+          "ao_map": "zombie-occlusion-3",
+          "normal_map": "zombie-normal-3",
+          "albedo": [1, 1, 1],
+          "specular": [0.5, 0.5, 0.5],
+          "roughness": 0.5,
+          "emissive": [0, 0, 0],
+          "sampler": "default"
+        },
+
         "metal": {
           "type": "tinted",
           "shader": "tinted",
@@ -243,8 +330,8 @@
     "world": [
       {
         "name": "PlayerCamera",
-        "position": [ 0, 2.0, 10 ],
-        "rotation": [ 0, 180, 0 ],
+        "position": [ 0, 2.0, 15 ],
+        "rotation": [ 0, 0, 0 ],
         "components": [
           { "type": "Camera" },
           { "type": "Movement",
@@ -297,6 +384,66 @@
             "shape": "mesh",
             "mesh": "hall",
             "mass": 0
+          }
+        ]
+      },
+      {
+        "name": "Zombie1",
+        "position": [ -2, 1, 12 ],
+        "rotation": [ 0, 0, 0 ],
+        "scale": [ 1, 1, 1 ],
+        "components": [
+          {
+            "type": "Mesh Renderer",
+            "mesh": "zombie",
+            "material": "zombie-material-1"
+          },
+          {
+            "type": "Bullet Collider",
+            "shape": "capsule",
+            "size": [ 0.5, 1.8, 0.5 ],
+            "mass": 80.0,
+            "friction": 2.0
+          }
+        ]
+      },
+      {
+        "name": "Zombie2",
+        "position": [ 2, 1, 12 ],
+        "rotation": [ 0, 0, 0 ],
+        "scale": [ 1, 1, 1 ],
+        "components": [
+          {
+            "type": "Mesh Renderer",
+            "mesh": "zombie",
+            "material": "zombie-material-2"
+          },
+          {
+            "type": "Bullet Collider",
+            "shape": "capsule",
+            "size": [ 0.5, 1.8, 0.5 ],
+            "mass": 80.0,
+            "friction": 2.0
+          }
+        ]
+      },
+      {
+        "name": "Zombie3",
+        "position": [ 0, 1, 12 ],
+        "rotation": [ 0, 0, 0 ],
+        "scale": [ 1, 1, 1 ],
+        "components": [
+          {
+            "type": "Mesh Renderer",
+            "mesh": "zombie",
+            "material": "zombie-material-3"
+          },
+          {
+            "type": "Bullet Collider",
+            "shape": "capsule",
+            "size": [ 0.5, 1.8, 0.5 ],
+            "mass": 80.0,
+            "friction": 2.0
           }
         ]
       }

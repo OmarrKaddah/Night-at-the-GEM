@@ -17,6 +17,7 @@ class Playstate: public our::State {
     our::FreeCameraControllerSystem cameraController;
     our::MovementSystem movementSystem;
     our::PhysicsSystem physicsSystem;
+    bool first_frame = true;  // Instance variable to track first frame
 
     void onInitialize() override {
         // First of all, we get the scene configuration from the app config
@@ -46,10 +47,10 @@ class Playstate: public our::State {
         
         // Lock mouse on startup
         static bool mouse_locked = false;
-        static bool first_frame = true;
         if(!mouse_locked){
             mouse.lockMouse(getApp()->getWindow());
             mouse_locked = true;
+            first_frame = true;  // Reset first_frame when entering play state
         }
         
         for(auto entity : world.getEntities()){
