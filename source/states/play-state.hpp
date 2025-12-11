@@ -6,6 +6,7 @@
 #include <systems/forward-renderer.hpp>
 #include <systems/free-camera-controller.hpp>
 #include <systems/movement.hpp>
+#include <systems/zombie-movement.hpp>
 #include <systems/physics-system.hpp>
 #include <asset-loader.hpp>
 
@@ -16,6 +17,7 @@ class Playstate: public our::State {
     our::ForwardRenderer renderer;
     our::FreeCameraControllerSystem cameraController;
     our::MovementSystem movementSystem;
+    our::ZombieMovementSystem zombieMovementSystem;
     our::PhysicsSystem physicsSystem;
     bool first_frame = true;  // Instance variable to track first frame
 
@@ -93,6 +95,9 @@ class Playstate: public our::State {
             }
         }
         
+        // Drive zombie idle/walk animation before physics so colliders move with them.
+        zombieMovementSystem.update(&world, (float)deltaTime);
+
         // Update physics simulation (this applies collision response)
         physicsSystem.update((float)deltaTime);
         

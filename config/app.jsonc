@@ -391,6 +391,14 @@
             "material": "zombie-material-1"
           },
           {
+            "type": "Zombie Movement",
+            "walkAmplitude": 1.6,
+            "walkSpeed": 0.45,
+            "swayAmplitude": 0.4,
+            "swaySpeed": 1.1,
+            "phase": 0.0
+          },
+          {
             "type": "Bullet Collider",
             "shape": "capsule",
             "size": [ 0.5, 1.8, 0.5 ],
@@ -410,6 +418,14 @@
             "material": "zombie-material-2"
           },
           {
+            "type": "Zombie Movement",
+            "walkAmplitude": 1.2,
+            "walkSpeed": 0.55,
+            "swayAmplitude": 0.45,
+            "swaySpeed": 1.3,
+            "phase": 1.2
+          },
+          {
             "type": "Bullet Collider",
             "shape": "capsule",
             "size": [ 0.5, 1.8, 0.5 ],
@@ -427,6 +443,14 @@
             "type": "Mesh Renderer",
             "mesh": "zombie",
             "material": "zombie-material-3"
+          },
+          {
+            "type": "Zombie Movement",
+            "walkAmplitude": 1.4,
+            "walkSpeed": 0.5,
+            "swayAmplitude": 0.35,
+            "swaySpeed": 1.0,
+            "phase": 2.1
           },
           {
             "type": "Bullet Collider",

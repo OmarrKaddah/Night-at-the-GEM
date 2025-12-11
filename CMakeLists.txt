@@ -96,6 +96,8 @@ set(COMMON_SOURCES
         source/common/components/bullet-collider.cpp
         source/common/components/light.hpp
         source/common/components/light.cpp
+        source/common/components/zombie-movement.hpp
+        source/common/components/zombie-movement.cpp
         source/common/components/component-deserializer.hpp
 
         source/common/systems/forward-renderer.hpp
@@ -104,6 +106,7 @@ set(COMMON_SOURCES
         source/common/systems/physics-system.cpp
         source/common/systems/free-camera-controller.hpp
         source/common/systems/movement.hpp
+        source/common/systems/zombie-movement.hpp
 )
 
 # Define the directories in which to search for the included headers
