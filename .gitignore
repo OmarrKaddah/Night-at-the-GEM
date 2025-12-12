@@ -33,3 +33,33 @@ CMakeSettings.json
 
 # Screenshots
 screenshots/
+
+# Assimp Bloat Cleaned Up
+vendor/assimp-6.0.2/test/
+vendor/assimp-6.0.2/tools/
+vendor/assimp-6.0.2/samples/
+vendor/assimp-6.0.2/doc/
+vendor/assimp-6.0.2/fuzz/
+vendor/assimp-6.0.2/port/
+vendor/assimp-6.0.2/packaging/
+vendor/assimp-6.0.2/scripts/
+vendor/assimp-6.0.2/contrib/android-cmake/
+vendor/assimp-6.0.2/contrib/draco/
+vendor/assimp-6.0.2/contrib/googletest/
+vendor/assimp-6.0.2/contrib/tinyusdz/
+vendor/assimp-6.0.2/contrib/Open3DGC/
+
+# Assimp Root Bloat Files
+vendor/assimp-6.0.2/.clang-format
+vendor/assimp-6.0.2/.editorconfig
+vendor/assimp-6.0.2/Build.md
+vendor/assimp-6.0.2/BUILDBINARIES_EXAMPLE.bat
+vendor/assimp-6.0.2/CHANGES
+vendor/assimp-6.0.2/CODE_OF_CONDUCT.md
+vendor/assimp-6.0.2/CodeConventions.md
+vendor/assimp-6.0.2/CONTRIBUTING.md
+vendor/assimp-6.0.2/CREDITS
+vendor/assimp-6.0.2/Dockerfile
+vendor/assimp-6.0.2/INSTALL
+vendor/assimp-6.0.2/Readme.md
+vendor/assimp-6.0.2/SECURITY.md

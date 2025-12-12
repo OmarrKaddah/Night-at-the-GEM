@@ -231,11 +231,20 @@ namespace our {
         glm::mat4 localTransform;
 
         if (it != clip->boneAnimations.end()) {
-        // If animation exists, use it as the local transform
-        localTransform = it->second.getTransform(time);
+            // If animation exists, use it as the local transform
+            localTransform = it->second.getTransform(time);
         } else {
             // Otherwise, fall back to the default T-Pose (bind transform)
             localTransform = bone.localBindTransform;
+        }
+
+        // Manual Fix for Rotated Jaw:
+        // 1. Z-axis: -90 degrees (Un-roll from cheek)
+        // 2. X-axis: +90 degrees (Yaw from Left to Forward)
+        if (bone.name.find("Zombie_low_jaw1") != std::string::npos) {
+             glm::mat4 correction = glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0, 0, 1));
+             correction = glm::rotate(correction, glm::radians(90.0f), glm::vec3(1, 0, 0));
+             localTransform = localTransform * correction;
         }
 
         // Compute global transform by multiplying with parent
