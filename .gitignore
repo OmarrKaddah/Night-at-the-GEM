@@ -13,6 +13,10 @@ imgui.ini
 *.jpg
 *.jpeg
 *.obj
+*.tga
+*.meta
+*.glb
+*.mtl
 
 # Since ".obj" are ignored by default, we force them to be added
 # !assets/models/**/*.obj

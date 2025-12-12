@@ -31,7 +31,7 @@ namespace our {
             component = entity->addComponent<BulletColliderComponent>();
 		} else if (type == AnimatorComponent::getID()) {
             component = entity->addComponent<AnimatorComponent>();
-		}
+        }
         if(component) component->deserialize(data);
     }
 

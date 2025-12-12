@@ -65,9 +65,6 @@ class Playstate: public our::State {
                     first_frame = false;
                 }
                 
-                // Debug mouse drift
-                if(glm::length(delta) > 0.0f) std::cout << "Mouse Delta: " << delta.x << ", " << delta.y << std::endl;
-
                 // Deadzone to prevent drift
                 if(glm::length(delta) < 10.0f) delta = glm::vec2(0.0f); 
                 
