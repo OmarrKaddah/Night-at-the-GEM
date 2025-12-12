@@ -72,3 +72,31 @@ our::Texture2D* our::texture_utils::loadImage(const std::string& filename, bool 
     stbi_image_free(pixels); //Free image data after uploading to GPU
     return texture;
 }
+
+our::Texture2D* our::texture_utils::loadImageFromMemory(const unsigned char* data, int sizeInBytes, bool generate_mipmap) {
+    if(!data || sizeInBytes <= 0) return nullptr;
+    glm::ivec2 size;
+    int channels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* pixels = stbi_load_from_memory(data, sizeInBytes, &size.x, &size.y, &channels, 4);
+    if(pixels == nullptr){
+        std::cerr << "Failed to load image from memory" << std::endl;
+        return nullptr;
+    }
+    our::Texture2D* texture = new our::Texture2D();
+    texture->bind();
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    if(generate_mipmap){
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    our::Texture2D::unbind();
+    stbi_image_free(pixels);
+    return texture;
+}

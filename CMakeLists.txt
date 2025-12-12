@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+
 # These are the options we select for building GLFW as a library
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)        # Don't build Documentation
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)       # Don't build Tests
@@ -19,6 +20,9 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)    # Don't build Examples
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)           # Don't build Installation Information
 set(GLFW_USE_HYBRID_HPG ON CACHE BOOL "" FORCE)     # Add variables to use High Performance Graphics Card if available
 add_subdirectory(vendor/glfw)                       # Build the GLFW project to use later as a library
+
+# Add Assimp as a subdirectory (local build)
+add_subdirectory(vendor/assimp-6.0.2)
 
 # Bullet Physics - compile as source files to avoid CMake incompatibility
 file(GLOB_RECURSE BULLET_SOURCES 
@@ -62,6 +66,18 @@ set(COMMON_SOURCES
         source/common/mesh/mesh.hpp
         source/common/mesh/mesh-utils.hpp
         source/common/mesh/mesh-utils.cpp
+        source/common/mesh/mesh-loader.cpp
+        source/common/mesh/mesh-loader.hpp
+
+        source/common/animation/animation.cpp
+        source/common/animation/animation.hpp
+        source/common/animation/animation-loader.cpp
+        source/common/animation/animation-loader.hpp
+
+        source/common/components/animator.cpp
+        source/common/components/animator.hpp
+
+        source/common/components/animator.cpp
 
         source/common/texture/sampler.hpp
         source/common/texture/sampler.cpp
@@ -100,10 +116,14 @@ set(COMMON_SOURCES
 
         source/common/systems/forward-renderer.hpp
         source/common/systems/forward-renderer.cpp
+        source/common/systems/animation-system.cpp
+        source/common/systems/animation-system.hpp
+        source/common/systems/animation-system.cpp
         source/common/systems/physics-system.hpp
         source/common/systems/physics-system.cpp
         source/common/systems/free-camera-controller.hpp
         source/common/systems/movement.hpp
+        source/common/systems/animation-system.cpp
 )
 
 # Define the directories in which to search for the included headers
@@ -115,6 +135,7 @@ include_directories(
         vendor/imgui
         vendor/utils
         vendor/bullet3/src
+        vendor/assimp-6.0.2/include
 )
 
 
@@ -140,7 +161,8 @@ set(STATES_SOURCES
 # Each target compiles one example source file and the common & vendor source files
 # Then we link GLFW with each target
 add_executable(GAME_APPLICATION source/main.cpp ${STATES_SOURCES} ${COMMON_SOURCES} ${VENDOR_SOURCES})
-target_link_libraries(GAME_APPLICATION glfw)
+target_link_libraries(GAME_APPLICATION glfw assimp)
+target_include_directories(GAME_APPLICATION PUBLIC vendor/assimp-6.0.2/include)
 
 if(UNIX AND NOT APPLE)
         target_link_libraries(GAME_APPLICATION OpenGL::GL)

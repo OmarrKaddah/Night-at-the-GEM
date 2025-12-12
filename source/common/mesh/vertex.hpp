@@ -9,11 +9,18 @@ namespace our {
     // we are creating our own 32-bit R8G8B8A8 Color data type with the default GLM precision
     typedef glm::vec<4, glm::uint8, glm::defaultp> Color;
 
+    // Maximum number of bones that can influence a single vertex
+    constexpr int MAX_BONE_INFLUENCE = 4;
+
     struct Vertex {
         glm::vec3 position;     // The vertex position in the local space
         Color color;            // The vertex color
         glm::vec2 tex_coord;    // The texture coordinates (the vertex position in the texture space)
         glm::vec3 normal;       // The surface normal at the vertex (This will be used for lighting in the final phase)
+        
+        // Bone data for skeletal animation
+        int boneIDs[MAX_BONE_INFLUENCE] = {-1, -1, -1, -1};      // IDs of bones that influence this vertex
+        float boneWeights[MAX_BONE_INFLUENCE] = {0.0f, 0.0f, 0.0f, 0.0f}; // Weights of bone influence
 
         // We plan to use this as a key for a map so we need to define the equality operator
         bool operator==(const Vertex& other) const {

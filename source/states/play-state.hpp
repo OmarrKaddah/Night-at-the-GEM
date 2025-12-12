@@ -7,6 +7,7 @@
 #include <systems/free-camera-controller.hpp>
 #include <systems/movement.hpp>
 #include <systems/physics-system.hpp>
+#include <systems/animation-system.hpp>
 #include <asset-loader.hpp>
 
 // This state shows how to use the ECS framework and deserialization.
@@ -17,6 +18,7 @@ class Playstate: public our::State {
     our::FreeCameraControllerSystem cameraController;
     our::MovementSystem movementSystem;
     our::PhysicsSystem physicsSystem;
+    our::AnimationSystem animationSystem;
     bool first_frame = true;  // Instance variable to track first frame
 
     void onInitialize() override {
@@ -38,6 +40,9 @@ class Playstate: public our::State {
         // Then we initialize the renderer
         auto size = getApp()->getFrameBufferSize();
         renderer.initialize(size, config["renderer"]);
+        // Explicitly lock mouse when entering state
+        getApp()->getMouse().lockMouse(getApp()->getWindow());
+        first_frame = true;
     }
 
     void onDraw(double deltaTime) override {
@@ -46,12 +51,7 @@ class Playstate: public our::State {
         auto& kb = getApp()->getKeyboard();
         
         // Lock mouse on startup
-        static bool mouse_locked = false;
-        if(!mouse_locked){
-            mouse.lockMouse(getApp()->getWindow());
-            mouse_locked = true;
-            first_frame = true;  // Reset first_frame when entering play state
-        }
+
         
         for(auto entity : world.getEntities()){
             auto* collider = entity->getComponent<our::BulletColliderComponent>();
@@ -60,18 +60,41 @@ class Playstate: public our::State {
             if(collider && collider->mass > 0.0f && collider->rigidBody && camera) {
                 // Handle mouse rotation (always active now)
                 glm::vec2 delta = mouse.getMouseDelta();
-                // Skip the first frame to ignore initial mouse position
                 if(first_frame) {
                     delta = glm::vec2(0.0f);
                     first_frame = false;
                 }
+                
+                // Debug mouse drift
+                if(glm::length(delta) > 0.0f) std::cout << "Mouse Delta: " << delta.x << ", " << delta.y << std::endl;
+
+                // Deadzone to prevent drift
+                if(glm::length(delta) < 10.0f) delta = glm::vec2(0.0f); 
+                
                 glm::vec3 rotation = entity->localTransform.rotation;
                 rotation.x -= delta.y * 0.01f;
                 rotation.y -= delta.x * 0.01f;
+                
                 // Clamp pitch to prevent flipping
                 if(rotation.x < -glm::half_pi<float>() * 0.99f) rotation.x = -glm::half_pi<float>() * 0.99f;
                 if(rotation.x > glm::half_pi<float>() * 0.99f) rotation.x = glm::half_pi<float>() * 0.99f;
                 entity->localTransform.rotation = rotation;
+                
+                // Sync rotation to physics body MANUALLY to avoid resetting linear velocity (which breaks gravity)
+                // collider->syncFromEntity(); // This was causing the issue because it zeroes velocity!
+                
+                btTransform trans = collider->rigidBody->getWorldTransform();
+                
+                // Only sync Y-rotation (Yaw) to physics body so the capsule stays upright!
+                // If we pitch the capsule (look down), it will tip over and 'orbit'/'drift'.
+                glm::vec3 eulerRot = entity->localTransform.rotation;
+                glm::quat yawQuat = glm::quat(glm::vec3(0, eulerRot.y, 0)); 
+                
+                trans.setRotation(btQuaternion(yawQuat.x, yawQuat.y, yawQuat.z, yawQuat.w));
+                collider->rigidBody->setWorldTransform(trans);
+                if(collider->rigidBody->getMotionState()) {
+                    collider->rigidBody->getMotionState()->setWorldTransform(trans);
+                }
                 
                 glm::vec3 velocity(0, 0, 0);
                 float speed = 5.0f;
@@ -93,6 +116,14 @@ class Playstate: public our::State {
             }
         }
         
+        // Run other systems (but NOT camera controller - we handle movement with physics)
+        // movementSystem.update(&world, (float)deltaTime); // DISABLED: overwrites physics velocity!
+        // cameraController.update(&world, (float)deltaTime); // DISABLED
+        
+        // Update animations (Calculate bone positions)
+        animationSystem.update(&world, (float)deltaTime);
+        
+
         // Update physics simulation (this applies collision response)
         physicsSystem.update((float)deltaTime);
         
@@ -103,10 +134,6 @@ class Playstate: public our::State {
                 collider->syncToEntity(); // Update entity from physics
             }
         }
-        
-        // Run other systems (but NOT camera controller - we handle movement with physics)
-        movementSystem.update(&world, (float)deltaTime);
-        // cameraController.update(&world, (float)deltaTime); // DISABLED
         
         // And finally we use the renderer system to draw the scene
         renderer.render(&world);

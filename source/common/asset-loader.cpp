@@ -6,10 +6,15 @@
 #include "texture/sampler.hpp"
 #include "mesh/mesh.hpp"
 #include "mesh/mesh-utils.hpp"
+#include "mesh/mesh-loader.hpp"
 #include "material/material.hpp"
+#include "animation/animation.hpp"
 #include "deserialize-utils.hpp"
 
 namespace our {
+
+    // Global skeleton storage (loaded alongside animated meshes)
+    static std::unordered_map<std::string, std::shared_ptr<Skeleton>> g_skeletons;
 
     // This will load all the shaders defined in "data"
     // data must be in the form:
@@ -68,7 +73,28 @@ namespace our {
         if(data.is_object()){
             for(auto& [name, desc] : data.items()){
                 std::string path = desc.get<std::string>();
-                assets[name] = mesh_utils::loadOBJ(path);
+                
+                // Check file extension (C++17 compatible)
+                bool isFBX = (path.size() >= 4 && 
+                             (path.substr(path.size() - 4) == ".fbx" || 
+                              path.substr(path.size() - 4) == ".FBX"));
+                bool isGLB = (path.size() >= 4 && 
+                             (path.substr(path.size() - 4) == ".glb" || 
+                              path.substr(path.size() - 4) == ".GLB"));
+                bool isGLTF = (path.size() >= 5 && 
+                              (path.substr(path.size() - 5) == ".gltf" || 
+                               path.substr(path.size() - 5) == ".GLTF"));
+                
+                if (isFBX || isGLB || isGLTF) {
+                    std::shared_ptr<Skeleton> skeleton;
+                    assets[name] = mesh_utils::loadAnimatedMesh(path, skeleton);
+                    // Store skeleton with same name as mesh for easy access
+                    if (skeleton) {
+                        g_skeletons[name] = skeleton;
+                    }
+                } else {
+                    assets[name] = mesh_utils::loadOBJ(path);
+                }
             }
         }
     };
@@ -117,6 +143,15 @@ namespace our {
         AssetLoader<Sampler>::clear();
         AssetLoader<Mesh>::clear();
         AssetLoader<Material>::clear();
+        g_skeletons.clear();
+    }
+
+    std::shared_ptr<Skeleton> getSkeleton(const std::string& name) {
+        auto it = g_skeletons.find(name);
+        if (it != g_skeletons.end()) {
+            return it->second;
+        }
+        return nullptr;
     }
 
 }

@@ -12,6 +12,9 @@
 namespace our
 {
     
+    // Forward declare AnimatorComponent
+    class AnimatorComponent;
+
     // The render command stores command that tells the renderer that it should draw
     // the given mesh at the given localToWorld matrix using the given material
     // The renderer will fill this struct using the mesh renderer components
@@ -20,6 +23,7 @@ namespace our
         glm::vec3 center;
         Mesh* mesh;
         Material* material;
+        AnimatorComponent* animator = nullptr; // Optional animator for skeletal animation
     };
 
     // A forward renderer is a renderer that draw the object final color directly to the framebuffer
@@ -40,6 +44,9 @@ namespace our
         GLuint postprocessFrameBuffer, postProcessVertexArray;
         Texture2D *colorTarget, *depthTarget;
         TexturedMaterial* postprocessMaterial;
+        // Debug drawing
+        ShaderProgram* debugLineShader = nullptr;
+        bool debugDrawSkeleton = true; // enable skeleton debug drawing by default
     public:
         // Initialize the renderer including the sky and the Postprocessing objects.
         // windowSize is the width & height of the window (in pixels).

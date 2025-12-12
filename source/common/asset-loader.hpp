@@ -16,6 +16,10 @@ namespace our {
         // All assets in this map are owned by the asset loader so it should not be deleted outside of this class
         static inline std::unordered_map<std::string, T*> assets;
     public:
+        // Register an asset with a name. Ownership is transferred to the AssetLoader.
+        static void set(const std::string& name, T* asset) {
+            assets[name] = asset;
+        }
         // This function loads the assets defined by the given json object
         // The json object should be defined in the form: {asset_name: asset_description}
         // For example: {"white": "textures/white.png", "polka": "textures/polka.png"} defines 2 textures
@@ -48,4 +52,7 @@ namespace our {
     void deserializeAllAssets(const nlohmann::json& assetData);
     // This will call "AssetLoader<T>::clear" for all the different asset types T
     void clearAllAssets();
+    
+    // Get a skeleton by name (loaded alongside animated meshes)
+    std::shared_ptr<struct Skeleton> getSkeleton(const std::string& name);
 }

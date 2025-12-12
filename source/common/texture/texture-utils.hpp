@@ -11,4 +11,6 @@ namespace our::texture_utils {
     Texture2D* empty(GLenum format, glm::ivec2 size);
     // This function loads an image and sends its data to the given Texture2D 
     Texture2D* loadImage(const std::string& filename, bool generate_mipmap = true);
+    // Load image data from memory (e.g. embedded images in GLB). Returns a Texture2D or nullptr on failure.
+    Texture2D* loadImageFromMemory(const unsigned char* data, int sizeInBytes, bool generate_mipmap = true);
 }

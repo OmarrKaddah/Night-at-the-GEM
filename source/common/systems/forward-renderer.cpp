@@ -1,6 +1,8 @@
 ﻿#include "forward-renderer.hpp"
 #include "../mesh/mesh-utils.hpp"
 #include "../texture/texture-utils.hpp"
+#include "../components/animator.hpp"
+#include "../material/material.hpp"
 #include <iostream>
 
 namespace our {
@@ -100,6 +102,12 @@ namespace our {
             // so it is more performant to disable the depth mask
             postprocessMaterial->pipelineState.depthMask = false;
         }
+
+        // Create a simple debug shader for drawing skeleton lines
+        debugLineShader = new ShaderProgram();
+        debugLineShader->attach("assets/shaders/tinted.vert", GL_VERTEX_SHADER);
+        debugLineShader->attach("assets/shaders/tinted.frag", GL_FRAGMENT_SHADER);
+        debugLineShader->link();
     }
 
     void ForwardRenderer::destroy(){
@@ -121,6 +129,10 @@ namespace our {
             delete postprocessMaterial->shader;
             delete postprocessMaterial;
         }
+        if(debugLineShader){
+            delete debugLineShader;
+            debugLineShader = nullptr;
+        }
     }
 
     void ForwardRenderer::render(World* world) {
@@ -141,6 +153,9 @@ namespace our {
                 command.center = glm::vec3(command.localToWorld * glm::vec4(0, 0, 0, 1));
                 command.mesh = meshRenderer->mesh;
                 command.material = meshRenderer->material;
+                
+                // Check for animator component
+                command.animator = entity->getComponent<AnimatorComponent>();
 
                 // Separate transparent and opaque commands
                 if (command.material->transparent)
@@ -191,56 +206,105 @@ namespace our {
 
         // === 5) Draw opaque objects ==========================================
         for (const auto& cmd : opaqueCommands) {
-            cmd.material->setup();
-            cmd.material->shader->use();
-
-            // Compute MVP transform and send to shader
-            glm::mat4 transform = VP * cmd.localToWorld;
-            cmd.material->shader->set("transform", transform);
-
-            // Draw the mesh
-            //cmd.mesh->draw();
+            
             // MULTI-MATERIAL DRAWING
             if (!cmd.mesh->submeshes.empty()) {
                 GLuint vao = cmd.mesh->getVAO();
                 glBindVertexArray(vao);
 
                 for (auto& sub : cmd.mesh->submeshes) {
-
-                    // Try material matching the .mtl name
                     Material* matToUse = AssetLoader<Material>::get(sub.materialName);
-
-                    // If not found, fallback to the material set in JSON
                     if (!matToUse) matToUse = cmd.material;
                     if (!matToUse) continue;
 
                     matToUse->setup();
                     matToUse->shader->use();
+                    matToUse->shader->set("transform", VP * cmd.localToWorld);
 
-                    glm::mat4 transform = VP * cmd.localToWorld;
-                    matToUse->shader->set("transform", transform);
+                    // OPTIMIZED SKINNING DATA
+                    if (cmd.animator && !cmd.animator->boneTransforms.empty()) {
+                        matToUse->shader->set("useSkinning", true);
+                        matToUse->shader->set("boneTransforms", cmd.animator->boneTransforms.data(), (uint32_t)cmd.animator->boneTransforms.size());
+                    } else {
+                        matToUse->shader->set("useSkinning", false);
+                    }
 
-                    glDrawElements(
-                        GL_TRIANGLES,
-                        sub.count,
-                        GL_UNSIGNED_INT,
-                        (void*)(sub.offset * sizeof(GLuint))
-                    );
+                    glDrawElements(GL_TRIANGLES, sub.count, GL_UNSIGNED_INT, (void*)(sub.offset * sizeof(GLuint)));
                 }
-
                 glBindVertexArray(0);
             }
             else {
-                // Single-material mesh
+                // SINGLE-MATERIAL MESH
                 cmd.material->setup();
                 cmd.material->shader->use();
+                cmd.material->shader->set("transform", VP * cmd.localToWorld);
 
-                glm::mat4 transform = VP * cmd.localToWorld;
-                cmd.material->shader->set("transform", transform);
-
+                if (cmd.animator && !cmd.animator->boneTransforms.empty()) {
+                    cmd.material->shader->set("useSkinning", true);
+                    cmd.material->shader->set("boneTransforms", cmd.animator->boneTransforms.data(), (uint32_t)cmd.animator->boneTransforms.size());
+                } else {
+                    cmd.material->shader->set("useSkinning", false);
+                }
                 cmd.mesh->draw();
             }
+        }
 
+        // Debug: draw skeleton lines for animated meshes
+        if (debugLineShader && debugDrawSkeleton) {
+            std::vector<float> lineVerts; // position (3) + color (4)
+
+            for (const auto& cmd : opaqueCommands) {
+                if (!cmd.animator) continue;
+                auto skel = cmd.animator->skeleton;
+                if (!skel) continue;
+                if (cmd.animator->jointTransforms.size() != skel->bones.size()) continue;
+
+                for (size_t i = 0; i < skel->bones.size(); ++i) {
+                    int parent = skel->parentIndices[i];
+                    if (parent < 0) continue;
+
+                    glm::vec4 p0 = cmd.localToWorld * (cmd.animator->jointTransforms[parent] * glm::vec4(0,0,0,1));
+                    glm::vec4 p1 = cmd.localToWorld * (cmd.animator->jointTransforms[i] * glm::vec4(0,0,0,1));
+
+                    // color: green
+                    float r = 0.0f, g = 1.0f, b = 0.0f, a = 1.0f;
+
+                    // parent
+                    lineVerts.push_back(p0.x); lineVerts.push_back(p0.y); lineVerts.push_back(p0.z);
+                    lineVerts.push_back(r); lineVerts.push_back(g); lineVerts.push_back(b); lineVerts.push_back(a);
+                    // child
+                    lineVerts.push_back(p1.x); lineVerts.push_back(p1.y); lineVerts.push_back(p1.z);
+                    lineVerts.push_back(r); lineVerts.push_back(g); lineVerts.push_back(b); lineVerts.push_back(a);
+                }
+            }
+
+            if (!lineVerts.empty()) {
+                GLuint vao = 0, vbo = 0;
+                glGenVertexArrays(1, &vao);
+                glGenBuffers(1, &vbo);
+                glBindVertexArray(vao);
+
+                glBindBuffer(GL_ARRAY_BUFFER, vbo);
+                glBufferData(GL_ARRAY_BUFFER, lineVerts.size() * sizeof(float), lineVerts.data(), GL_DYNAMIC_DRAW);
+
+                // position (location = 0)
+                glEnableVertexAttribArray(0);
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)0);
+                // color (location = 1)
+                glEnableVertexAttribArray(1);
+                glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(3 * sizeof(float)));
+
+                // draw
+                debugLineShader->use();
+                debugLineShader->set("transform", VP);
+                glLineWidth(2.0f);
+                glBindVertexArray(vao);
+                glDrawArrays(GL_LINES, 0, (GLsizei)(lineVerts.size() / 7));
+                glBindVertexArray(0);
+
+                glDeleteBuffers(1, &vbo);
+                glDeleteVertexArrays(1, &vao);
+            }
         }
 
         // === 6) Draw sky (Req 10) ============================================
@@ -307,6 +371,13 @@ namespace our {
                     glm::mat4 transform = VP * cmd.localToWorld;
                     matToUse->shader->set("transform", transform);
 
+                    if (cmd.animator && !cmd.animator->boneTransforms.empty()) {
+                        matToUse->shader->set("useSkinning", true);
+                        matToUse->shader->set("boneTransforms", cmd.animator->boneTransforms.data(), (uint32_t)cmd.animator->boneTransforms.size());
+                    } else {
+                        matToUse->shader->set("useSkinning", false);
+                    }
+
                     glDrawElements(
                         GL_TRIANGLES,
                         sub.count,
@@ -324,6 +395,14 @@ namespace our {
 
                 glm::mat4 transform = VP * cmd.localToWorld;
                 cmd.material->shader->set("transform", transform);
+                
+                // Check for animator component
+                if (cmd.animator && !cmd.animator->boneTransforms.empty()) {
+                    cmd.material->shader->set("useSkinning", true);
+                    cmd.material->shader->set("boneTransforms", cmd.animator->boneTransforms.data(), (uint32_t)cmd.animator->boneTransforms.size());
+                } else {
+                    cmd.material->shader->set("useSkinning", false);
+                }
 
                 cmd.mesh->draw();
             }

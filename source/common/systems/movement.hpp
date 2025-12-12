@@ -2,7 +2,7 @@
 
 #include "../ecs/world.hpp"
 #include "../components/movement.hpp"
-
+#include "../components/bullet-collider.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 #include <glm/trigonometric.hpp>
@@ -25,9 +25,22 @@ namespace our
                 MovementComponent* movement = entity->getComponent<MovementComponent>();
                 // If the movement component exists
                 if(movement){
-                    // Change the position and rotation based on the linear & angular velocity and delta time.
-                    entity->localTransform.position += deltaTime * movement->linearVelocity;
-                    entity->localTransform.rotation += deltaTime * movement->angularVelocity;
+                    // 1. Check if the entity has physics enabled
+                    BulletColliderComponent* collider = entity->getComponent<BulletColliderComponent>();
+
+                    if(collider && collider->rigidBody && collider->mass > 0.0f) {
+                        // 2. Instead of "teleporting" the entity, set the velocity of the physics body
+                        btVector3 vel(movement->linearVelocity.x, movement->linearVelocity.y, movement->linearVelocity.z);
+                        collider->rigidBody->setLinearVelocity(vel);
+                        
+                        // Let Bullet handle the rotation too if you have angular velocity
+                        btVector3 angVel(movement->angularVelocity.x, movement->angularVelocity.y, movement->angularVelocity.z);
+                        collider->rigidBody->setAngularVelocity(angVel);
+                    } else {
+                        // 3. Only do manual movement if there is NO physics component
+                        entity->localTransform.position += deltaTime * movement->linearVelocity;
+                        entity->localTransform.rotation += deltaTime * movement->angularVelocity;
+                    }
                 }
             }
         }

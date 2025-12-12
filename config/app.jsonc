@@ -1,6 +1,5 @@
 {
   "start-scene": "menu",
-
   "window": {
     "title": "El Harb El 3alameya El Talta: Night at the Hintze Hall",
     "size": {
@@ -9,13 +8,11 @@
     },
     "fullscreen": false
   },
-
   "scene": {
     "renderer": {
       "sky": "assets/textures/sky.jpg",
       "postprocess": "assets/shaders/postprocess/vignette.frag"
     },
-
     "assets": {
       "shaders": {
         "tinted": {
@@ -26,12 +23,15 @@
           "vs": "assets/shaders/textured.vert",
           "fs": "assets/shaders/textured.frag"
         },
+        "skinned": {
+          "vs": "assets/shaders/skinned.vert",
+          "fs": "assets/shaders/skinned.frag"
+        },
         "lit": {
           "vs": "assets/shaders/lit.vert",
           "fs": "assets/shaders/lit.frag"
         }
       },
-
       "textures": {
         "moon": "assets/textures/moon.jpg",
         "grass": "assets/textures/grass_ground_d.jpg",
@@ -61,11 +61,7 @@
         "zombie-metallic-3": "assets/textures/zombie/3/1_Metallic.tga",
         "zombie-normal-3": "assets/textures/zombie/3/1_Normal.tga",
         "zombie-occlusion-3": "assets/textures/zombie/3/1_Occlusion.tga"
-
-
-
       },
-
       "meshes": {
         "cube": "assets/models/cube.obj",
         "monkey": "assets/models/monkey.obj",
@@ -73,15 +69,21 @@
         "sphere": "assets/models/sphere.obj",
         "hall": "assets/models/NHMHintzeHall01.obj",
         "gun": "assets/models/gun.obj",
-        "zombie": "assets/models/zombie.obj"
-
-
-
+        "zombie": "assets/models/zombie.obj",
+        "zombie-fbx": "assets/models/zombie.fbx",
+        "zombie-glb": "assets/models/zombie.glb",
+        "zombie-walk": "assets/animations/zombie@walk.fbx",
+        "zombie-idle": "assets/animations/zombie@idle1.fbx",
+        "zombie-death": "assets/animations/zombie@death1.fbx",
+        "zombie-walk-glb": "assets/animations/zombie@walk.glb",
+        "zombie-idle-glb": "assets/animations/zombie@idle1.glb",
+        "zombie-death-glb": "assets/animations/zombie@death1.glb"
       },
-
       "samplers": {
         "default": {},
-        "pixelated": { "MAG_FILTER": "GL_NEAREST" },
+        "pixelated": {
+          "MAG_FILTER": "GL_NEAREST"
+        },
         "anisotropic": {
           "MIN_FILTER": "GL_LINEAR_MIPMAP_LINEAR",
           "MAG_FILTER": "GL_LINEAR",
@@ -91,183 +93,18 @@
           "MIN_FILTER": "GL_LINEAR_MIPMAP_LINEAR",
           "MAG_FILTER": "GL_LINEAR"
         }
-
-
       },
-
       "materials": {
-
-
-
-
-
         "lambert4SG": {
-            "type": "textured",
-            "shader": "textured",
-            "pipelineState": {
-              "faceCulling": { "enabled": false },
-              "depthTesting": { "enabled": true },
-              "blending": {
-                "enabled": true,
-                "sourceFactor": "GL_SRC_ALPHA",
-                "destinationFactor": "GL_ONE_MINUS_SRC_ALPHA"
-              },
-              "depthMask": false
+          "type": "textured",
+          "shader": "textured",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false
             },
-            "transparent": true,
-            "texture": "glass",
-            "sampler": "pixelated"
-          },
-
-
-        "Material.001": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-001",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-        "Material.004": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-004",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-        "Material.012": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-012",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-        "Material.013": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-013",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-        "Material.015": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-015",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-        "Material.017": {
-          "type": "textured",
-          "shader": "textured",
-          "texture": "gun-tex-017",
-          "tint": [ 1, 1, 1, 1 ],
-          "sampler": "default",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          }
-        },
-
-
-        "NHMHintzeHall02_Model_9_u1_v1": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [ 1, 1, 1, 1 ],
-          "texture": "hall-tex-1",
-          "sampler": "mipmap-linear"
-        },
-        "NHMHintzeHall02_Model_9_u2_v1": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [ 1, 1, 1, 1 ],
-          "texture": "hall-tex-2",
-          "sampler": "mipmap-linear"
-        },
-
-        "zombie-material-1": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": true, "culledFace": "GL_BACK" },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [1, 1, 1, 1],
-          "texture": "zombie-albedo-1",
-          "sampler": "default"
-        },
-
-        "zombie-material-2": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": true, "culledFace": "GL_BACK" },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [1, 1, 1, 1],
-          "texture": "zombie-albedo-2",
-          "sampler": "default"
-        },
-
-        "zombie-material-3": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": true, "culledFace": "GL_BACK" },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [1, 1, 1, 1],
-          "texture": "zombie-albedo-3",
-          "sampler": "default"
-        },
-
-        "metal": {
-          "type": "tinted",
-          "shader": "tinted",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
-          },
-          "tint": [ 0.45, 0.4, 0.5, 1 ]
-        },
-
-        "glass": {
-          "type": "textured",
-          "shader": "textured",
-          "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true },
+            "depthTesting": {
+              "enabled": true
+            },
             "blending": {
               "enabled": true,
               "sourceFactor": "GL_SRC_ALPHA",
@@ -276,85 +113,415 @@
             "depthMask": false
           },
           "transparent": true,
-          "tint": [ 1, 1, 1, 1 ],
           "texture": "glass",
           "sampler": "pixelated"
         },
-
+        "Material.001": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-001",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          }
+        },
+        "Material.004": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-004",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          }
+        },
+        "Material.012": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-012",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          }
+        },
+        "Material.013": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-013",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          }
+        },
+        "Material.015": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-015",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          }
+        },
+        "Material.017": {
+          "type": "textured",
+          "shader": "textured",
+          "texture": "gun-tex-017",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "sampler": "default",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          }
+        },
+        "NHMHintzeHall02_Model_9_u1_v1": {
+          "type": "textured",
+          "shader": "textured",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          },
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "texture": "hall-tex-1",
+          "sampler": "mipmap-linear"
+        },
+        "NHMHintzeHall02_Model_9_u2_v1": {
+          "type": "textured",
+          "shader": "textured",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          },
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "texture": "hall-tex-2",
+          "sampler": "mipmap-linear"
+        },
+        "zombie-material-1": {
+          "type": "textured",
+          "shader": "skinned",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false,
+              "culledFace": "GL_BACK"
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          },
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "texture": "zombie-albedo-1",
+          "sampler": "default",
+          "alphaThreshold": 0.1
+        },
+        "zombie-material-2": {
+          "type": "textured",
+          "shader": "skinned",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false,
+              "culledFace": "GL_BACK"
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          },
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "texture": "zombie-albedo-2",
+          "sampler": "default",
+          "alphaThreshold": 0.1
+        },
+        "zombie-material-3": {
+          "type": "textured",
+          "shader": "skinned",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false,
+              "culledFace": "GL_BACK"
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          },
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "texture": "zombie-albedo-3",
+          "sampler": "default",
+          "alphaThreshold": 0.1
+        },
+        "metal": {
+          "type": "tinted",
+          "shader": "tinted",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
+          },
+          "tint": [
+            0.45,
+            0.4,
+            0.5,
+            1
+          ]
+        },
+        "glass": {
+          "type": "textured",
+          "shader": "textured",
+          "pipelineState": {
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            },
+            "blending": {
+              "enabled": true,
+              "sourceFactor": "GL_SRC_ALPHA",
+              "destinationFactor": "GL_ONE_MINUS_SRC_ALPHA"
+            },
+            "depthMask": false
+          },
+          "transparent": true,
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "texture": "glass",
+          "sampler": "pixelated"
+        },
         "grass": {
           "type": "textured",
           "shader": "textured",
           "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
           },
-          "tint": [ 1, 1, 1, 1 ],
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
           "texture": "grass",
           "sampler": "default"
         },
-
         "monkey": {
           "type": "textured",
           "shader": "textured",
           "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
           },
-          "tint": [ 1, 1, 1, 1 ],
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
           "texture": "monkey",
           "sampler": "default"
         },
-
         "moon": {
           "type": "textured",
           "shader": "textured",
           "pipelineState": {
-            "faceCulling": { "enabled": false },
-            "depthTesting": { "enabled": true }
+            "faceCulling": {
+              "enabled": false
+            },
+            "depthTesting": {
+              "enabled": true
+            }
           },
-          "tint": [ 1, 1, 1, 1 ],
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ],
           "texture": "moon",
           "sampler": "default"
         }
       }
     },
-
     "world": [
       {
         "name": "PlayerCamera",
-        "position": [ 0, 2.0, 15 ],
-        "rotation": [ 0, 0, 0 ],
+        "position": [
+          0,
+          2.0,
+          15
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
         "components": [
-          { "type": "Camera" },
-          { "type": "Movement",
-            "linearVelocity": [0, 0, 0]
+          {
+            "type": "Camera"
+          },
+          {
+            "type": "Movement",
+            "linearVelocity": [
+              0,
+              0,
+              0
+            ]
           },
           {
             "type": "Bullet Collider",
             "shape": "capsule",
-            "size": [ 0.2, 0.7, 0.2 ],
+            "size": [
+              0.2,
+              0.7,
+              0.2
+            ],
             "mass": 1.0,
-            "friction": 0.1
+            "friction": 1.0
           }
         ],
         "children": [
           {
             "name": "Gun",
-            "position": [ 0.35, -0.25, -0.6 ],
-            "rotation": [ 0, 0, 0 ],
-            "scale": [ 0.08, 0.08, 0.08 ],
+            "position": [
+              0.35,
+              -0.25,
+              -0.6
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.08,
+              0.08,
+              0.08
+            ],
             "components": [
               {
                 "type": "Mesh Renderer",
                 "mesh": "gun",
                 "material": "Material.001" // fallback only; submeshes override this
               },
+              // Gun collider restored as trigger
               {
                 "type": "Bullet Collider",
                 "shape": "box",
-                "size": [ 0.1, 0.1, 0.3 ],
+                "size": [
+                  0.1,
+                  0.1,
+                  0.3
+                ],
                 "mass": 0.5,
-                "friction": 0.5
+                "friction": 0.5,
+                "isTrigger": true
               }
             ]
           }
@@ -362,9 +529,21 @@
       },
       {
         "name": "Hall",
-        "position": [ 0, 0.6, 18 ],
-        "scale": [ 0.5, 0.5, 0.5 ],
-        "rotation": [ -90, 0, 0 ],
+        "position": [
+          0,
+          0.6,
+          18
+        ],
+        "scale": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "rotation": [
+          -90,
+          0,
+          0
+        ],
         "components": [
           {
             "type": "Mesh Renderer",
@@ -381,57 +560,144 @@
       },
       {
         "name": "Zombie1",
-        "position": [ -2, 1, 12 ],
-        "rotation": [ 0, 0, 0 ],
-        "scale": [ 0.42, 0.42, 0.42 ],
+        "position": [
+          -2,
+          1,
+          12
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.42,
+          0.42,
+          0.42
+        ],
         "components": [
           {
             "type": "Mesh Renderer",
-            "mesh": "zombie",
+            "mesh": "zombie-fbx",
             "material": "zombie-material-1"
+          },
+          {
+            "type": "Animator",
+            "skeleton": "zombie-fbx",
+            "animations": {
+              "walk": "assets/animations/zombie@walk.fbx",
+              "idle": "assets/animations/zombie@idle1.fbx",
+              "death": "assets/animations/zombie@death1.fbx"
+            },
+            "currentAnimation": "idle",
+            "speed": 1.0,
+            "loop": true,
+            "isPlaying": true
           },
           {
             "type": "Bullet Collider",
             "shape": "capsule",
-            "size": [ 0.5, 1.8, 0.5 ],
+            "size": [
+              0.5,
+              1.8,
+              0.5
+            ],
             "mass": 0
           }
         ]
       },
       {
         "name": "Zombie2",
-        "position": [ 2, 1, 12 ],
-        "rotation": [ 0, 0, 0 ],
-        "scale": [ 0.42, 0.42, 0.42 ],
+        "position": [
+          2,
+          1,
+          12
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.42,
+          0.42,
+          0.42
+        ],
         "components": [
           {
             "type": "Mesh Renderer",
-            "mesh": "zombie",
+            "mesh": "zombie-fbx",
             "material": "zombie-material-2"
+          },
+          {
+            "type": "Animator",
+            "skeleton": "zombie-fbx",
+            "animations": {
+              "walk": "assets/animations/zombie@walk.fbx",
+              "idle": "assets/animations/zombie@idle1.fbx",
+              "death": "assets/animations/zombie@death1.fbx"
+            },
+            "currentAnimation": "walk",
+            "speed": 1.0,
+            "loop": true,
+            "isPlaying": true
           },
           {
             "type": "Bullet Collider",
             "shape": "capsule",
-            "size": [ 0.5, 1.8, 0.5 ],
+            "size": [
+              0.5,
+              1.8,
+              0.5
+            ],
             "mass": 0
           }
         ]
       },
       {
         "name": "Zombie3",
-        "position": [ 0, 1, 12 ],
-        "rotation": [ 0, 0, 0 ],
-        "scale": [ 0.42, 0.42, 0.42 ],
+        "position": [
+          0,
+          1,
+          12
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.42,
+          0.42,
+          0.42
+        ],
         "components": [
           {
             "type": "Mesh Renderer",
-            "mesh": "zombie",
+            "mesh": "zombie-fbx",
             "material": "zombie-material-3"
+          },
+          {
+            "type": "Animator",
+            "skeleton": "zombie-fbx",
+            "animations": {
+              "walk": "assets/animations/zombie@walk.fbx",
+              "idle": "assets/animations/zombie@idle1.fbx",
+              "death": "assets/animations/zombie@death1.fbx"
+            },
+            "currentAnimation": "idle",
+            "speed": 1.0,
+            "loop": true,
+            "isPlaying": true
           },
           {
             "type": "Bullet Collider",
             "shape": "capsule",
-            "size": [ 0.5, 1.8, 0.5 ],
+            "size": [
+              0.5,
+              1.8,
+              0.5
+            ],
             "mass": 0
           }
         ]

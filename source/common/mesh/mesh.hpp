@@ -11,6 +11,8 @@ namespace our {
 #define ATTRIB_LOC_COLOR    1
 #define ATTRIB_LOC_TEXCOORD 2
 #define ATTRIB_LOC_NORMAL   3
+#define ATTRIB_LOC_BONE_IDS 4
+#define ATTRIB_LOC_BONE_WEIGHTS 5
 
     class Mesh {
         unsigned int VBO, EBO;
@@ -62,6 +64,13 @@ namespace our {
 
             glEnableVertexAttribArray(ATTRIB_LOC_NORMAL);
             glVertexAttribPointer(ATTRIB_LOC_NORMAL, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+
+            // Setup bone attributes for skeletal animation
+            glEnableVertexAttribArray(ATTRIB_LOC_BONE_IDS);
+            glVertexAttribIPointer(ATTRIB_LOC_BONE_IDS, 4, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, boneIDs));
+
+            glEnableVertexAttribArray(ATTRIB_LOC_BONE_WEIGHTS);
+            glVertexAttribPointer(ATTRIB_LOC_BONE_WEIGHTS, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, boneWeights));
 
             glBindVertexArray(0);
         }

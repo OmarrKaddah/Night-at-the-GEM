@@ -243,8 +243,8 @@ namespace our {
 
         // For character controllers (non-zero mass), lock rotation and disable gravity
         if (mass > 0.0f && !isTrigger) {
-            rigidBody->setAngularFactor(btVector3(0, 0, 0)); // No rotation
-            rigidBody->setGravity(btVector3(0, 0, 0)); // No gravity
+            rigidBody->setAngularFactor(btVector3(0, 1, 0)); // No rotation
+            // rigidBody->setGravity(btVector3(0, 0, 0)); // No gravity
             rigidBody->setActivationState(DISABLE_DEACTIVATION); // Always active
             rigidBody->setLinearFactor(btVector3(1, 1, 1)); // Can move in all directions
             rigidBody->setFriction(1.0f); // High friction to prevent sliding

@@ -77,12 +77,16 @@ namespace our {
             glUniformMatrix4fv(getUniformLocation(uniform), 1, GL_FALSE, glm::value_ptr(matrix));
         }
 
+        void set(const std::string& uniform, const glm::mat4* matrices, uint32_t count) {
+            glUniformMatrix4fv(getUniformLocation(uniform), count, GL_FALSE, glm::value_ptr(matrices[0]));
+        }
+
         //TODO: (Req 1) Delete the copy constructor and assignment operator.
         ShaderProgram(const ShaderProgram&) = delete;
         ShaderProgram& operator=(const ShaderProgram&) = delete;
         //Question: Why do we delete the copy constructor and assignment operator?
         //Because the GLuint program is an OpenGL handle (not a simple number).
-        //If you copy it, both objects would refer to the same GPU program — leading to double deletions and undefined behavior.
+        //If you copy it, both objects would refer to the same GPU program ï¿½ leading to double deletions and undefined behavior.
     };
 
 }
