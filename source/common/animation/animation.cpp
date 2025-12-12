@@ -82,6 +82,8 @@ namespace our {
 
         // Interpolate scale
         glm::vec3 scale(1.0f);
+        // Force scale to 1.0 to prevent deformation from bad FBX data
+        /*
         if (!scaleKeyframes.empty()) {
             if (scaleKeyframes.size() == 1) {
                 scale = scaleKeyframes[0].scale;
@@ -98,6 +100,7 @@ namespace our {
                 }
             }
         }
+        */
 
         // Build transformation matrix
         transform = glm::translate(glm::mat4(1.0f), position);

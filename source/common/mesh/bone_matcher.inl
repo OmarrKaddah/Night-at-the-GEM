@@ -23,12 +23,22 @@
 
         auto startsWith = [](const std::string &s, const std::string &pref)->bool { return s.size() >= pref.size() && s.compare(0, pref.size(), pref) == 0; };
 
+        auto stripAssimpFbx = [](const std::string &s)->std::string {
+            std::string token = "_$AssimpFbx$_";
+            size_t p = s.find(token);
+            if (p != std::string::npos) return s.substr(0, p);
+            return s;
+        };
+
         std::vector<std::string> candidates;
         std::string base = stripAfterPipe(originalName);
         candidates.push_back(base);
 
-        std::string stripped = stripTrailingDigitsDot(base);
-        if (stripped != base) candidates.push_back(stripped);
+        std::string cleaned = stripAssimpFbx(base);
+        if (cleaned != base) candidates.push_back(cleaned);
+
+        std::string stripped = stripTrailingDigitsDot(cleaned);
+        if (stripped != cleaned) candidates.push_back(stripped);
 
         // Common prefixes used by exporters / rigs
         const std::vector<std::string> prefixes = {"Zombie_Ctrl_", "Zombie_Ctrl", "Zombie_", "Zombie", "Ctrl_", "ctrl_", "Bip01_", ""};

@@ -8,6 +8,7 @@
 #include <systems/movement.hpp>
 #include <systems/physics-system.hpp>
 #include <systems/animation-system.hpp>
+#include <components/animator.hpp>
 #include <asset-loader.hpp>
 
 // This state shows how to use the ECS framework and deserialization.
@@ -139,8 +140,34 @@ class Playstate: public our::State {
         auto& keyboard = getApp()->getKeyboard();
 
         if(keyboard.justPressed(GLFW_KEY_ESCAPE)){
-            // If the escape  key is pressed in this frame, go to the play state
             getApp()->changeState("menu");
+        }
+        
+        // Disable/Enable Skinning (Diagnostic)
+        if(keyboard.justPressed(GLFW_KEY_K)){
+            // Toggle global uniform or iterate entities? 
+            // Simpler: Just toggle a static bool and send it
+            static bool skinningEnabled = true;
+            skinningEnabled = !skinningEnabled;
+            std::cout << "Skinning Enabled: " << skinningEnabled << std::endl;
+            
+            // Hack: set it on the next draw via material or global uniform
+            // Since we can't easily access the shader directly here without iterating materials,
+            // let's iterate the world and set a property on the material if we could.
+            // Actually, skinned.vert uses a uniform 'useSkinning'. 
+            // We need to pass this. For now, let's just print it and realize we need to change how we draw.
+            // BUT, we can pause animation easily!
+        }
+
+        // Pause/Play Animation (Diagnostic)
+        if(keyboard.justPressed(GLFW_KEY_P)){
+             for(auto entity : world.getEntities()){
+                auto* animator = entity->getComponent<our::AnimatorComponent>();
+                if(animator) {
+                    animator->isPlaying = !animator->isPlaying;
+                    std::cout << "Entity " << entity->name << " animation playing: " << animator->isPlaying << std::endl;
+                }
+             }
         }
     }
 

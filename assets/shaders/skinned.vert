@@ -40,8 +40,8 @@ void main() {
         }
 
         // Safety check: If no VALID bones contributed (usedWeight near 0), 
-        // implies the vertex is weighted to missing bones (e.g. Jaw).
-        // Fallback to bind pose (original position) to prevent collapse.
+        // implies the vertex is weighted to missing bones.
+        // Fallback to bind pose.
         if (usedWeight > 0.001) {
             // Apply the combined movement to position and normal
             localPosition = boneTransform * localPosition;

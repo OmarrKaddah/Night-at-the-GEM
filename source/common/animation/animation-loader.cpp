@@ -50,12 +50,22 @@ namespace our {
 
         auto startsWith = [](const std::string &s, const std::string &pref)->bool { return s.size() >= pref.size() && s.compare(0, pref.size(), pref) == 0; };
 
+        auto stripAssimpFbx = [](const std::string &s)->std::string {
+            std::string token = "_$AssimpFbx$_";
+            size_t p = s.find(token);
+            if (p != std::string::npos) return s.substr(0, p);
+            return s;
+        };
+
         std::vector<std::string> candidates;
         std::string base = stripAfterPipe(originalName);
         candidates.push_back(base);
 
-        std::string stripped = stripTrailingDigitsDot(base);
-        if (stripped != base) candidates.push_back(stripped);
+        std::string cleaned = stripAssimpFbx(base);
+        if (cleaned != base) candidates.push_back(cleaned);
+
+        std::string stripped = stripTrailingDigitsDot(cleaned);
+        if (stripped != cleaned) candidates.push_back(stripped);
 
         // Common prefixes used by exporters / rigs
         const std::vector<std::string> prefixes = {"Zombie_Ctrl_", "Zombie_Ctrl", "Zombie_", "Zombie", "Ctrl_", "ctrl_", "Bip01_", ""};
@@ -462,31 +472,50 @@ namespace our {
 
                 matchedBones++;
 
+                // Detect specific channel types from the suffix
+                bool loadPos = true;
+                bool loadRot = true;
+                bool loadScl = true;
+
+                if (originalName.find("_$AssimpFbx$_Translation") != std::string::npos) {
+                    loadPos = true; loadRot = false; loadScl = false;
+                } else if (originalName.find("_$AssimpFbx$_Rotation") != std::string::npos) {
+                    loadPos = false; loadRot = true; loadScl = false;
+                } else if (originalName.find("_$AssimpFbx$_Scaling") != std::string::npos) {
+                    loadPos = false; loadRot = false; loadScl = true;
+                }
+
                 // If already present, append keyframes; otherwise create new
                 BoneAnimation& boneAnim = animClip->boneAnimations[boneId];
 
                 // Load position keyframes
-                for (unsigned int p = 0; p < channel->mNumPositionKeys; ++p) {
-                    PositionKeyframe keyframe;
-                    keyframe.time = static_cast<float>(channel->mPositionKeys[p].mTime);
-                    keyframe.position = aiVector3DToGlm(channel->mPositionKeys[p].mValue);
-                    boneAnim.positionKeyframes.push_back(keyframe);
+                if (loadPos) {
+                    for (unsigned int p = 0; p < channel->mNumPositionKeys; ++p) {
+                        PositionKeyframe keyframe;
+                        keyframe.time = static_cast<float>(channel->mPositionKeys[p].mTime);
+                        keyframe.position = aiVector3DToGlm(channel->mPositionKeys[p].mValue);
+                        boneAnim.positionKeyframes.push_back(keyframe);
+                    }
                 }
 
                 // Load rotation keyframes
-                for (unsigned int r = 0; r < channel->mNumRotationKeys; ++r) {
-                    RotationKeyframe keyframe;
-                    keyframe.time = static_cast<float>(channel->mRotationKeys[r].mTime);
-                    keyframe.rotation = aiQuaternionToGlm(channel->mRotationKeys[r].mValue);
-                    boneAnim.rotationKeyframes.push_back(keyframe);
+                if (loadRot) {
+                    for (unsigned int r = 0; r < channel->mNumRotationKeys; ++r) {
+                        RotationKeyframe keyframe;
+                        keyframe.time = static_cast<float>(channel->mRotationKeys[r].mTime);
+                        keyframe.rotation = aiQuaternionToGlm(channel->mRotationKeys[r].mValue);
+                        boneAnim.rotationKeyframes.push_back(keyframe);
+                    }
                 }
 
                 // Load scale keyframes
-                for (unsigned int s = 0; s < channel->mNumScalingKeys; ++s) {
-                    ScaleKeyframe keyframe;
-                    keyframe.time = static_cast<float>(channel->mScalingKeys[s].mTime);
-                    keyframe.scale = aiVector3DToGlm(channel->mScalingKeys[s].mValue);
-                    boneAnim.scaleKeyframes.push_back(keyframe);
+                if (loadScl) {
+                    for (unsigned int s = 0; s < channel->mNumScalingKeys; ++s) {
+                        ScaleKeyframe keyframe;
+                        keyframe.time = static_cast<float>(channel->mScalingKeys[s].mTime);
+                        keyframe.scale = aiVector3DToGlm(channel->mScalingKeys[s].mValue);
+                        boneAnim.scaleKeyframes.push_back(keyframe);
+                    }
                 }
             }
         }
