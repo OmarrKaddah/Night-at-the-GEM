@@ -3,6 +3,7 @@
 #include "../ecs/world.hpp"
 #include "../components/camera.hpp"
 #include "../components/mesh-renderer.hpp"
+#include "../components/light.hpp"
 #include "../asset-loader.hpp"
 
 #include <glad/gl.h>
@@ -40,6 +41,11 @@ namespace our
         GLuint postprocessFrameBuffer, postProcessVertexArray;
         Texture2D *colorTarget, *depthTarget;
         TexturedMaterial* postprocessMaterial;
+        // Objects used for Shadow Mapping
+        GLuint shadowMapFBO = 0;
+        Texture2D* shadowMap = nullptr;
+        const int shadowMapSize = 2048; // Shadow map resolution
+        ShaderProgram* shadowMapShader = nullptr;
     public:
         // Initialize the renderer including the sky and the Postprocessing objects.
         // windowSize is the width & height of the window (in pixels).

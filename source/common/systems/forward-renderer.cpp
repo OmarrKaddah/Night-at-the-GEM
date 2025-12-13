@@ -1,6 +1,7 @@
 ﻿#include "forward-renderer.hpp"
 #include "../mesh/mesh-utils.hpp"
 #include "../texture/texture-utils.hpp"
+#include "../material/material.hpp"
 #include <iostream>
 
 namespace our {
@@ -100,6 +101,42 @@ namespace our {
             // so it is more performant to disable the depth mask
             postprocessMaterial->pipelineState.depthMask = false;
         }
+
+        // Initialize shadow map for flashlight shadows
+        glGenFramebuffers(1, &shadowMapFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+        
+        // Create shadow map depth texture
+        shadowMap = texture_utils::empty(GL_DEPTH_COMPONENT24, glm::ivec2(shadowMapSize, shadowMapSize));
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMap->getOpenGLName(), 0);
+        
+        // Configure shadow map texture for shadow sampling
+        shadowMap->bind();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+        // Use manual depth comparison (GL_NONE for compare mode)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        Texture2D::unbind();
+        
+        // No color buffer needed for shadow map
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        
+        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+            std::cerr << "ERROR: Shadow map framebuffer is not complete" << std::endl;
+        }
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        
+        // Create shadow map shader (simple depth-only shader)
+        shadowMapShader = new ShaderProgram();
+        shadowMapShader->attach("assets/shaders/shadow-map.vert", GL_VERTEX_SHADER);
+        shadowMapShader->attach("assets/shaders/shadow-map.frag", GL_FRAGMENT_SHADER);
+        shadowMapShader->link();
     }
 
     void ForwardRenderer::destroy(){
@@ -121,15 +158,28 @@ namespace our {
             delete postprocessMaterial->shader;
             delete postprocessMaterial;
         }
+        // Delete shadow map resources
+        if(shadowMapFBO != 0){
+            glDeleteFramebuffers(1, &shadowMapFBO);
+            delete shadowMap;
+            if(shadowMapShader){
+                delete shadowMapShader;
+            }
+            shadowMapFBO = 0;
+        }
     }
 
     void ForwardRenderer::render(World* world) {
-        // 1) Find camera & collect render commands 
+        // 1) Find camera & collect render commands and lights
         CameraComponent* camera = nullptr;
         opaqueCommands.clear();
         transparentCommands.clear();
+        std::vector<LightComponent*> lights;
+        glm::mat4 lightSpaceMatrix(1.0f);
+        LightComponent* flashlight = nullptr;
+        int flashlightIndex = -1;
 
-        // Loop through entities to find camera and mesh renderers
+        // Loop through entities to find camera, mesh renderers, and lights
         for (auto entity : world->getEntities()) {
             // If no camera yet, try to get one
             if (!camera) camera = entity->getComponent<CameraComponent>();
@@ -148,10 +198,117 @@ namespace our {
                 else
                     opaqueCommands.push_back(command);
             }
+
+            // Collect lights
+            if (auto light = entity->getComponent<LightComponent>()) {
+                lights.push_back(light);
+            }
         }
 
         // Cannot render without a camera
         if (camera == nullptr) return;
+
+        // === 0) Render shadow map from flashlight perspective ==================
+        // Find the first spotlight (flashlight) and its index
+        for (size_t i = 0; i < lights.size(); i++) {
+            if (lights[i]->lightType == LightType::SPOT) {
+                flashlight = lights[i];
+                flashlightIndex = (int)i;
+                break;
+            }
+        }
+        
+        // Debug: Check if flashlight was found
+        if (!flashlight) {
+            // No spotlight found, disable shadows
+            flashlightIndex = -1;
+        }
+        
+        // Only render shadow map if we have a flashlight and valid shadow map resources
+        if (flashlight && shadowMapFBO != 0 && shadowMap && shadowMapShader) {
+            // Debug output to verify shadow map is being rendered
+            // std::cout << "Rendering shadow map from flashlight at position: " 
+            //           << flashlight->getPosition().x << ", " 
+            //           << flashlight->getPosition().y << ", " 
+            //           << flashlight->getPosition().z << std::endl;
+            // Calculate light's view-projection matrix
+            glm::vec3 lightPos = flashlight->getPosition();
+            glm::vec3 lightDir = flashlight->getDirection();
+            glm::vec3 lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
+            // If light is pointing straight up/down, use different up vector
+            if (abs(glm::dot(lightDir, lightUp)) > 0.9f) {
+                lightUp = glm::vec3(0.0f, 0.0f, 1.0f);
+            }
+            
+            // Create light's view matrix (looking in light direction)
+            glm::mat4 lightView = glm::lookAt(lightPos, lightPos + lightDir, lightUp);
+            
+            // Create light's projection matrix (perspective for spotlight)
+            // outer_angle is already in radians, multiply by 2 to get full FOV
+            float lightFOV = flashlight->outer_angle * 2.0f; // Use outer angle for projection
+            // Clamp FOV to reasonable range
+            lightFOV = glm::clamp(lightFOV, glm::radians(10.0f), glm::radians(120.0f));
+            float lightNear = 0.1f;
+            float lightFar = 100.0f; // Increased far plane to cover more area
+            glm::mat4 lightProj = glm::perspective(lightFOV, 1.0f, lightNear, lightFar);
+            
+            lightSpaceMatrix = lightProj * lightView;
+            
+            // Render shadow map - MUST be done every frame to update shadows
+            glViewport(0, 0, shadowMapSize, shadowMapSize);
+            glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+            
+            // CRITICAL: Clear depth buffer completely every frame
+            // This ensures old shadows are removed before rendering new ones
+            glEnable(GL_DEPTH_TEST);
+            glDepthFunc(GL_LESS);
+            glDepthMask(GL_TRUE);  // Enable depth writing
+            glClearDepth(1.0);     // Set clear value to far plane (white = no shadow)
+            glClear(GL_DEPTH_BUFFER_BIT);  // Clear the depth buffer - removes all old shadows
+            
+            // Disable color writing
+            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+            // Use back face culling for shadow map (standard approach)
+            // Front face culling can cause issues with some models
+            glCullFace(GL_BACK);
+            glEnable(GL_CULL_FACE);
+            
+            shadowMapShader->use();
+            
+            // Render all opaque objects to shadow map with their CURRENT positions
+            // This ensures shadows update as objects move
+            // IMPORTANT: We render ALL objects (zombies, ground, walls) to the shadow map
+            // so we can detect when the ground/walls are behind zombies
+            for (const auto& cmd : opaqueCommands) {
+                // Use current world matrix (updated each frame from entity's current transform)
+                shadowMapShader->set("model", cmd.localToWorld);
+                shadowMapShader->set("lightSpaceMatrix", lightSpaceMatrix);
+                
+                if (!cmd.mesh->submeshes.empty()) {
+                    GLuint vao = cmd.mesh->getVAO();
+                    glBindVertexArray(vao);
+                    for (auto& sub : cmd.mesh->submeshes) {
+                        glDrawElements(GL_TRIANGLES, sub.count, GL_UNSIGNED_INT, 
+                                     (void*)(sub.offset * sizeof(GLuint)));
+                    }
+                    glBindVertexArray(0);
+                } else {
+                    cmd.mesh->draw();
+                }
+            }
+            
+            // Flush rendering to ensure shadow map is complete
+            // Note: glFinish() can be expensive, but ensures shadow map is ready
+            // For better performance, you could remove this, but shadows might lag slightly
+            // glFinish();
+            
+            // Unbind and restore state
+            glCullFace(GL_BACK); // Restore back face culling
+            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            // Restore viewport
+            glViewport(0, 0, windowSize.x, windowSize.y);
+        }
 
         // === 2) Sort transparent objects from far → near ======================
         glm::mat4 cameraWorld = camera->getOwner()->getLocalToWorldMatrix();
@@ -189,6 +346,9 @@ namespace our {
         // Clear color and depth
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // Get camera position for lighting
+        glm::vec3 cameraPos = glm::vec3(cameraWorld * glm::vec4(0, 0, 0, 1));
+
         // === 5) Draw opaque objects ==========================================
         for (const auto& cmd : opaqueCommands) {
             cmd.material->setup();
@@ -197,6 +357,66 @@ namespace our {
             // Compute MVP transform and send to shader
             glm::mat4 transform = VP * cmd.localToWorld;
             cmd.material->shader->set("transform", transform);
+            
+            // For lit materials, also send model matrix for world position calculation
+            if (dynamic_cast<LitMaterial*>(cmd.material)) {
+                cmd.material->shader->set("model", cmd.localToWorld);
+                cmd.material->shader->set("model_IT", glm::transpose(glm::inverse(cmd.localToWorld)));
+            }
+
+            // Send shadow map data BEFORE lighting data (so it's bound when shader uses it)
+            if (dynamic_cast<LitMaterial*>(cmd.material)) {
+                if (flashlight && shadowMap && flashlightIndex >= 0 && shadowMapFBO != 0) {
+                    cmd.material->shader->set("use_shadows", 1);
+                    cmd.material->shader->set("light_space_matrix", lightSpaceMatrix);
+                    cmd.material->shader->set("flashlight_index", flashlightIndex);
+                    // Bind shadow map to texture unit 5
+                    glActiveTexture(GL_TEXTURE5);
+                    shadowMap->bind();
+                    cmd.material->shader->set("shadow_map", 5);
+                    glActiveTexture(GL_TEXTURE0); // Reset to texture unit 0
+                } else {
+                    cmd.material->shader->set("use_shadows", 0);
+                }
+            }
+
+            // Send lighting data if this is a lit material
+            if (dynamic_cast<LitMaterial*>(cmd.material)) {
+                // Send lights (up to 8)
+                int lightCount = std::min((int)lights.size(), 8);
+                // Ensure light_count is set even if 0
+                cmd.material->shader->set("light_count", lightCount);
+                
+                for (int i = 0; i < lightCount; i++) {
+                    auto* light = lights[i];
+                    std::string lightPrefix = "lights[" + std::to_string(i) + "]";
+                    
+                    cmd.material->shader->set(lightPrefix + ".type", (int)light->lightType);
+                    cmd.material->shader->set(lightPrefix + ".color", light->color);
+                    cmd.material->shader->set(lightPrefix + ".constant", light->attenuation_constant);
+                    cmd.material->shader->set(lightPrefix + ".linear", light->attenuation_linear);
+                    cmd.material->shader->set(lightPrefix + ".quadratic", light->attenuation_quadratic);
+                    cmd.material->shader->set(lightPrefix + ".inner_angle", cos(light->inner_angle));
+                    cmd.material->shader->set(lightPrefix + ".outer_angle", cos(light->outer_angle));
+                    
+                    // Position and direction depend on light type
+                    if (light->lightType == LightType::DIRECTIONAL) {
+                        cmd.material->shader->set(lightPrefix + ".direction", light->getDirection());
+                        cmd.material->shader->set(lightPrefix + ".position", glm::vec3(0.0f)); // Not used for directional
+                    } else {
+                        cmd.material->shader->set(lightPrefix + ".position", light->getPosition());
+                        if (light->lightType == LightType::SPOT) {
+                            cmd.material->shader->set(lightPrefix + ".direction", light->getDirection());
+                        } else {
+                            cmd.material->shader->set(lightPrefix + ".direction", glm::vec3(0.0f)); // Not used for point
+                        }
+                    }
+                }
+                
+                // Send camera position and ambient light
+                cmd.material->shader->set("camera_pos", cameraPos);
+                cmd.material->shader->set("ambient_light", glm::vec3(0.15f, 0.15f, 0.15f)); // Lighter ambient so you can see around the flashlight
+            }
 
             // Draw the mesh
             //cmd.mesh->draw();
@@ -249,8 +469,7 @@ namespace our {
             skyMaterial->setup();
             skyMaterial->shader->use();
 
-            // Get camera position
-            glm::vec3 cameraPos = glm::vec3(cameraWorld * glm::vec4(0, 0, 0, 1));
+            // Camera position already calculated above
 
             // Model matrix for sky: center it around camera
             glm::mat4 model = glm::translate(glm::mat4(1.0f), cameraPos);
@@ -287,6 +506,15 @@ namespace our {
 
             glm::mat4 transform = VP * cmd.localToWorld;
             cmd.material->shader->set("transform", transform);
+            
+            // Set model matrix for shaders that need world position (like light-beam)
+            // Check if shader has "model" uniform by trying to set it
+            if (cmd.material->shader->getUniformLocation("model") != -1) {
+                cmd.material->shader->set("model", cmd.localToWorld);
+                if (cmd.material->shader->getUniformLocation("model_IT") != -1) {
+                    cmd.material->shader->set("model_IT", glm::transpose(glm::inverse(cmd.localToWorld)));
+                }
+            }
             // MULTI-MATERIAL DRAWING
             if (!cmd.mesh->submeshes.empty()) {
                 GLuint vao = cmd.mesh->getVAO();
@@ -306,6 +534,14 @@ namespace our {
 
                     glm::mat4 transform = VP * cmd.localToWorld;
                     matToUse->shader->set("transform", transform);
+                    
+                    // Set model matrix for shaders that need world position
+                    if (matToUse->shader->getUniformLocation("model") != -1) {
+                        matToUse->shader->set("model", cmd.localToWorld);
+                        if (matToUse->shader->getUniformLocation("model_IT") != -1) {
+                            matToUse->shader->set("model_IT", glm::transpose(glm::inverse(cmd.localToWorld)));
+                        }
+                    }
 
                     glDrawElements(
                         GL_TRIANGLES,
@@ -324,6 +560,14 @@ namespace our {
 
                 glm::mat4 transform = VP * cmd.localToWorld;
                 cmd.material->shader->set("transform", transform);
+                
+                // Set model matrix for shaders that need world position
+                if (cmd.material->shader->getUniformLocation("model") != -1) {
+                    cmd.material->shader->set("model", cmd.localToWorld);
+                    if (cmd.material->shader->getUniformLocation("model_IT") != -1) {
+                        cmd.material->shader->set("model_IT", glm::transpose(glm::inverse(cmd.localToWorld)));
+                    }
+                }
 
                 cmd.mesh->draw();
             }

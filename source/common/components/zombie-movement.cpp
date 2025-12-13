@@ -1,12 +1,13 @@
 #include "zombie-movement.hpp"
+#include "../deserialize-utils.hpp"
 
 namespace our {
 
     void ZombieMovementComponent::deserialize(const nlohmann::json& data) {
         if (!data.is_object()) return;
 
-        forwardAxis = data.value("forwardAxis", forwardAxis);
-        swayAxis = data.value("swayAxis", swayAxis);
+        if(data.contains("forwardAxis")) forwardAxis = data["forwardAxis"].get<glm::vec3>();
+        if(data.contains("swayAxis")) swayAxis = data["swayAxis"].get<glm::vec3>();
         walkAmplitude = data.value("walkAmplitude", walkAmplitude);
         walkSpeed = data.value("walkSpeed", walkSpeed);
         swayAmplitude = data.value("swayAmplitude", swayAmplitude);

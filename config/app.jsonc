@@ -29,6 +29,10 @@
         "lit": {
           "vs": "assets/shaders/lit.vert",
           "fs": "assets/shaders/lit.frag"
+        },
+        "light-beam": {
+          "vs": "assets/shaders/light-beam.vert",
+          "fs": "assets/shaders/light-beam.frag"
         }
       },
 
@@ -194,62 +198,77 @@
 
 
         "NHMHintzeHall02_Model_9_u1_v1": {
-          "type": "textured",
-          "shader": "textured",
+          "type": "lit",
+          "shader": "lit",
           "pipelineState": {
             "faceCulling": { "enabled": false },
             "depthTesting": { "enabled": true }
           },
-          "tint": [ 1, 1, 1, 1 ],
-          "texture": "hall-tex-1",
-          "sampler": "mipmap-linear"
+          "albedo_map": "hall-tex-1",
+          "sampler": "mipmap-linear",
+          "albedo": [1, 1, 1],
+          "specular": [0.3, 0.3, 0.3],
+          "roughness": 0.7,
+          "ao": 1.0
         },
         "NHMHintzeHall02_Model_9_u2_v1": {
-          "type": "textured",
-          "shader": "textured",
+          "type": "lit",
+          "shader": "lit",
           "pipelineState": {
             "faceCulling": { "enabled": false },
             "depthTesting": { "enabled": true }
           },
-          "tint": [ 1, 1, 1, 1 ],
-          "texture": "hall-tex-2",
-          "sampler": "mipmap-linear"
+          "albedo_map": "hall-tex-2",
+          "sampler": "mipmap-linear",
+          "albedo": [1, 1, 1],
+          "specular": [0.3, 0.3, 0.3],
+          "roughness": 0.7,
+          "ao": 1.0
         },
 
         "zombie-material-1": {
-          "type": "textured",
-          "shader": "textured",
+          "type": "lit",
+          "shader": "lit",
           "pipelineState": {
             "faceCulling": { "enabled": true, "culledFace": "GL_BACK" },
             "depthTesting": { "enabled": true }
           },
-          "tint": [1, 1, 1, 1],
-          "texture": "zombie-albedo-1",
-          "sampler": "default"
+          "albedo_map": "zombie-albedo-1",
+          "sampler": "default",
+          "albedo": [1, 1, 1],
+          "specular": [0.2, 0.2, 0.2],
+          "roughness": 0.8,
+          "ao": 1.0
         },
 
         "zombie-material-2": {
-          "type": "textured",
-          "shader": "textured",
+          "type": "lit",
+          "shader": "lit",
           "pipelineState": {
             "faceCulling": { "enabled": true, "culledFace": "GL_BACK" },
             "depthTesting": { "enabled": true }
           },
-          "tint": [1, 1, 1, 1],
-          "texture": "zombie-albedo-2",
-          "sampler": "default"
+          "albedo_map": "zombie-albedo-2",
+          "sampler": "default",
+          "albedo": [1, 1, 1],
+          "specular": [0.2, 0.2, 0.2],
+          "roughness": 0.8,
+          "ao": 1.0
         },
 
         "zombie-material-3": {
-          "type": "textured",
-          "shader": "textured",
+          "type": "lit",
+          "shader": "lit",
           "pipelineState": {
             "faceCulling": { "enabled": true, "culledFace": "GL_BACK" },
             "depthTesting": { "enabled": true }
           },
-          "tint": [1, 1, 1, 1],
-          "texture": "zombie-albedo-3",
-          "sampler": "default"
+          "albedo_map": "zombie-albedo-3",
+          "sampler": "default",
+          "albedo": [1, 1, 1],
+          "specular": [0.2, 0.2, 0.2],
+          "roughness": 0.8,
+          "ao": 1.0
         },
 
         "metal": {
@@ -315,6 +334,22 @@
           "tint": [ 1, 1, 1, 1 ],
           "texture": "moon",
           "sampler": "default"
+        },
+
+        "light-beam": {
+          "type": "tinted",
+          "shader": "light-beam",
+          "pipelineState": {
+            "faceCulling": { "enabled": false },
+            "depthTesting": { "enabled": true },
+            "blending": {
+              "enabled": true,
+              "sourceFactor": "GL_SRC_ALPHA",
+              "destinationFactor": "GL_ONE_MINUS_SRC_ALPHA"
+            },
+            "depthMask": false
+          },
+          "transparent": true
         }
       }
     },
@@ -335,6 +370,18 @@
             "size": [ 0.2, 0.7, 0.2 ],
             "mass": 1.0,
             "friction": 0.1
+          },
+          {
+            "type": "Light",
+            "lightType": "spot",
+            "color": [4.0, 3.8, 3.5],
+            "attenuation": {
+              "constant": 1.0,
+              "linear": 0.35,
+              "quadratic": 0.18
+            },
+            "inner_angle": 15.0,
+            "outer_angle": 55.0
           }
         ],
         "children": [
@@ -376,6 +423,38 @@
             "shape": "mesh",
             "mesh": "hall",
             "mass": 0
+          }
+        ]
+      },
+      {
+        "name": "CeilingWindowLight",
+        "position": [ 0, 8, 18 ],
+        "rotation": [ 90, 0, 0 ],
+        "components": [
+          {
+            "type": "Light",
+            "lightType": "spot",
+            "color": [2.5, 2.8, 3.2],
+            "attenuation": {
+              "constant": 1.0,
+              "linear": 0.2,
+              "quadratic": 0.1
+            },
+            "inner_angle": 25.0,
+            "outer_angle": 65.0
+          }
+        ]
+      },
+      {
+        "name": "CeilingWindowLightRay",
+        "position": [ 0, 4, 18 ],
+        "rotation": [ 90, 0, 0 ],
+        "scale": [ 0.3, 8, 0.3 ],
+        "components": [
+          {
+            "type": "Mesh Renderer",
+            "mesh": "plane",
+            "material": "light-beam"
           }
         ]
       },
