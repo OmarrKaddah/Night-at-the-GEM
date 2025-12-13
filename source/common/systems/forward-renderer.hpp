@@ -38,12 +38,18 @@ namespace our
         std::vector<RenderCommand> opaqueCommands;
         std::vector<RenderCommand> transparentCommands;
         // Objects used for rendering a skybox
-        Mesh* skySphere;
-        TexturedMaterial* skyMaterial;
+        Mesh* skySphere = nullptr;
+        TexturedMaterial* skyMaterial = nullptr;
         // Objects used for Postprocessing
-        GLuint postprocessFrameBuffer, postProcessVertexArray;
-        Texture2D *colorTarget, *depthTarget;
-        TexturedMaterial* postprocessMaterial;
+        GLuint postprocessFrameBuffer = 0, postProcessVertexArray = 0;
+        Texture2D *colorTarget = nullptr, *depthTarget = nullptr;
+        
+        // ping-pong buffer
+        GLuint postprocessFrameBuffer2 = 0;
+        Texture2D *colorTarget2 = nullptr;
+        
+        std::vector<TexturedMaterial*> postprocessMaterials;
+        
         // Debug drawing
         ShaderProgram* debugLineShader = nullptr;
         bool debugDrawSkeleton = true; // enable skeleton debug drawing by default
@@ -55,6 +61,10 @@ namespace our
         void destroy();
         // This function should be called every frame to draw the given world
         void render(World* world);
+        
+        // Getter for postprocess material by name (to set uniforms)
+        TexturedMaterial* getPostProcessMaterial(const std::string& name);
+
 
 
     };

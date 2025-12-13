@@ -11,7 +11,173 @@
   "scene": {
     "renderer": {
       "sky": "assets/textures/sky.jpg",
-      "postprocess": "assets/shaders/postprocess/vignette.frag"
+      "postprocess": [
+        "assets/shaders/postprocess/blood.frag",
+        "assets/shaders/postprocess/blur.frag"
+      ]
+    },
+    "navigation": {
+      "floor0": {
+        "cellSize": 0.5,
+        "origin": [
+          -30,
+          -30
+        ],
+        "size": [
+          120,
+          120
+        ],
+        "floorY": -0.4,
+        "obstacles": []
+      },
+      "floor1": {
+        "cellSize": 0.5,
+        "origin": [
+          -30,
+          -30
+        ],
+        "size": [
+          120,
+          120
+        ],
+        "floorY": 1.8,
+        "obstacles": []
+      },
+      "floor2": {
+        "cellSize": 0.5,
+        "origin": [
+          -30,
+          -30
+        ],
+        "size": [
+          120,
+          120
+        ],
+        "floorY": 4.28,
+        "obstacles": []
+      },
+      "stairWaypoints": [
+        {
+          "position": [
+            -0.08,
+            -0.35,
+            22.2
+          ],
+          "targetFloor": 1,
+          "next": 1,
+          "comment": "F0→F1: Middle stairs bottom"
+        },
+        {
+          "position": [
+            -0.08,
+            0.67,
+            24.7
+          ],
+          "targetFloor": 1,
+          "next": 2,
+          "comment": "F0→F1: Mid-landing"
+        },
+        {
+          "position": [
+            -3.5,
+            1.81,
+            25.3
+          ],
+          "targetFloor": 1,
+          "next": -1,
+          "comment": "F0→F1: Left stairs top"
+        },
+        {
+          "position": [
+            -3.5,
+            1.81,
+            25.3
+          ],
+          "targetFloor": 0,
+          "next": 4,
+          "comment": "F1→F0: Left stairs top"
+        },
+        {
+          "position": [
+            -0.08,
+            0.67,
+            24.7
+          ],
+          "targetFloor": 0,
+          "next": 5,
+          "comment": "F1→F0: Mid-landing"
+        },
+        {
+          "position": [
+            -0.08,
+            -0.35,
+            22.2
+          ],
+          "targetFloor": 0,
+          "next": -1,
+          "comment": "F1→F0: Middle stairs bottom"
+        },
+        {
+          "position": [
+            3.5,
+            1.81,
+            21.5
+          ],
+          "targetFloor": 2,
+          "next": 7,
+          "comment": "F1→F2: Right stairs bottom"
+        },
+        {
+          "position": [
+            0.92,
+            3.21,
+            12.15
+          ],
+          "targetFloor": 2,
+          "next": 8,
+          "comment": "F1→F2: Mid-climb"
+        },
+        {
+          "position": [
+            3.4,
+            4.29,
+            9.3
+          ],
+          "targetFloor": 2,
+          "next": -1,
+          "comment": "F1→F2: Right stairs top"
+        },
+        {
+          "position": [
+            3.4,
+            4.29,
+            9.3
+          ],
+          "targetFloor": 1,
+          "next": 10,
+          "comment": "F2→F1: Right stairs top"
+        },
+        {
+          "position": [
+            0.92,
+            3.21,
+            12.15
+          ],
+          "targetFloor": 1,
+          "next": 11,
+          "comment": "F2→F1: Mid-descent"
+        },
+        {
+          "position": [
+            3.5,
+            1.81,
+            21.5
+          ],
+          "targetFloor": 1,
+          "next": -1,
+          "comment": "F2→F1: Right stairs bottom"
+        }
+      ]
     },
     "assets": {
       "shaders": {
@@ -33,11 +199,6 @@
         }
       },
       "textures": {
-        "moon": "assets/textures/moon.jpg",
-        "grass": "assets/textures/grass_ground_d.jpg",
-        "wood": "assets/textures/wood.jpg",
-        "glass": "assets/textures/glass-panels.png",
-        "monkey": "assets/textures/monkey.png",
         "hall-tex-1": "assets/textures/NHMHintzeHall02_Model_9_u1_v1_diffuse.jpeg",
         "hall-tex-2": "assets/textures/NHMHintzeHall02_Model_9_u2_v1_diffuse.jpeg",
         "gun-tex-001": "assets/textures/gun/Image_6.png",
@@ -63,10 +224,6 @@
         "zombie-occlusion-3": "assets/textures/zombie/3/1_Occlusion.tga"
       },
       "meshes": {
-        "cube": "assets/models/cube.obj",
-        "monkey": "assets/models/monkey.obj",
-        "plane": "assets/models/plane.obj",
-        "sphere": "assets/models/sphere.obj",
         "hall": "assets/models/NHMHintzeHall01.obj",
         "gun": "assets/models/gun.obj",
         "zombie": "assets/models/zombie.obj",
@@ -531,7 +688,7 @@
         "name": "Hall",
         "position": [
           0,
-          0.6,
+          -1.4,
           18
         ],
         "scale": [
@@ -562,7 +719,7 @@
         "name": "Zombie1",
         "position": [
           -2,
-          1,
+          0.2,
           12
         ],
         "rotation": [
@@ -599,10 +756,16 @@
             "shape": "capsule",
             "size": [
               0.5,
-              1.8,
+              0.6,
               0.5
             ],
-            "mass": 0
+            "mass": 50.0,
+            "friction": 0.0,
+            "centerOffset": [
+              0,
+              0.8,
+              0
+            ]
           }
         ]
       },
@@ -610,7 +773,7 @@
         "name": "Zombie2",
         "position": [
           2,
-          1,
+          0.2,
           12
         ],
         "rotation": [
@@ -647,10 +810,16 @@
             "shape": "capsule",
             "size": [
               0.5,
-              1.8,
+              0.6,
               0.5
             ],
-            "mass": 0
+            "mass": 50.0,
+            "friction": 0.0,
+            "centerOffset": [
+              0,
+              0.8,
+              0
+            ]
           }
         ]
       },
@@ -658,7 +827,7 @@
         "name": "Zombie3",
         "position": [
           0,
-          1,
+          0.2,
           12
         ],
         "rotation": [
@@ -695,10 +864,16 @@
             "shape": "capsule",
             "size": [
               0.5,
-              1.8,
+              0.6,
               0.5
             ],
-            "mass": 0
+            "mass": 50.0,
+            "friction": 0.0,
+            "centerOffset": [
+              0,
+              0.8,
+              0
+            ]
           }
         ]
       }
