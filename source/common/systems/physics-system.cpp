@@ -11,25 +11,29 @@ namespace our {
     }
 
     PhysicsSystem::~PhysicsSystem() {
+        destroy();
+    }
+
+    void PhysicsSystem::destroy() {
         // Clean up in reverse order of creation
         if (dynamicsWorld) {
             // Remove all rigid bodies
             for (int i = dynamicsWorld->getNumCollisionObjects() - 1; i >= 0; i--) {
                 btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[i];
-                btRigidBody* body = btRigidBody::upcast(obj);
-                if (body && body->getMotionState()) {
-                    delete body->getMotionState();
-                }
+                // We do NOT delete the motion state or the body here, as they are owned by the BulletColliderComponent
+                // which will be destroyed when the World is cleared.
                 dynamicsWorld->removeCollisionObject(obj);
-                delete obj;
             }
             delete dynamicsWorld;
+            dynamicsWorld = nullptr;
         }
         
-        if (solver) delete solver;
-        if (overlappingPairCache) delete overlappingPairCache;
-        if (dispatcher) delete dispatcher;
-        if (collisionConfiguration) delete collisionConfiguration;
+        if (solver) { delete solver; solver = nullptr; }
+        if (overlappingPairCache) { delete overlappingPairCache; overlappingPairCache = nullptr; }
+        if (dispatcher) { delete dispatcher; dispatcher = nullptr; }
+        if (collisionConfiguration) { delete collisionConfiguration; collisionConfiguration = nullptr; }
+        
+        colliders.clear();
     }
 
     void PhysicsSystem::initialize(const glm::vec3& gravityVec) {

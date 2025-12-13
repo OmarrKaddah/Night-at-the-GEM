@@ -336,13 +336,16 @@ class Playstate: public our::State {
              if(!isDead) {
                  isDead = true;
                  gameOverTimer = 2.0f; // Wait 2 seconds
-                 std::cout << "GAME OVER!" << std::endl;
+                 std::cout << "GAME OVER! Starting timer..." << std::endl;
              }
              
              gameOverTimer -= (float)deltaTime;
+             // std::cout << "Death Timer: " << gameOverTimer << std::endl; // Debug log
+             
              if(gameOverTimer <= 0.0f) {
+                 std::cout << "Timer finished! Switching to menu..." << std::endl;
                  getApp()->changeState("menu");
-                 return;
+                 // return; // Removed to allow rendering this frame before switch
              }
         }
 
@@ -489,7 +492,10 @@ class Playstate: public our::State {
     }
 
     void onDestroy() override {
+        std::cout << "Playstate::onDestroy - Start" << std::endl;
+
         // Destroy UI resources
+        std::cout << "Playstate::onDestroy - Cleaning UI" << std::endl;
         if(uiRectangle) { delete uiRectangle; uiRectangle = nullptr; }
         
         if(healthBarMaterial) {
@@ -504,12 +510,27 @@ class Playstate: public our::State {
         }
         
         // Don't forget to destroy the renderer
+        std::cout << "Playstate::onDestroy - Destroying Renderer" << std::endl;
         renderer.destroy();
         // On exit, we call exit for the camera controller system to make sure that the mouse is unlocked
+        std::cout << "Playstate::onDestroy - Exiting Camera Controller" << std::endl;
         cameraController.exit();
-        // Clear the world
+        
+        // Clean up systems that hold state (remove objects from simulation)
+        std::cout << "Playstate::onDestroy - Destroying Physics System" << std::endl;
+        physicsSystem.destroy();
+        std::cout << "Playstate::onDestroy - Destroying Zombie System" << std::endl;
+        zombieSystem.destroy();
+
+        // Clear the world (destroys entities and their components)
+        // BulletColliderComponent destructor will delete the rigid bodies
+        std::cout << "Playstate::onDestroy - Clearing World" << std::endl;
         world.clear();
+        
         // and we delete all the loaded assets to free memory on the RAM and the VRAM
+        std::cout << "Playstate::onDestroy - Clearing Assets" << std::endl;
         our::clearAllAssets();
+        
+        std::cout << "Playstate::onDestroy - End" << std::endl;
     }
 };

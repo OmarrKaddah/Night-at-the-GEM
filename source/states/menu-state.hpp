@@ -53,6 +53,8 @@ class Menustate: public our::State {
     float transitionTime = 0.0f;
 
     void onInitialize() override {
+        std::cout << "Menustate::onInitialize - Start" << std::endl;
+        
         // First, we create a material for the menu's background
         menuMaterial = new our::TexturedMaterial();
         // Here, we load the shader that will be used to draw the background
@@ -61,6 +63,7 @@ class Menustate: public our::State {
         menuMaterial->shader->attach("assets/shaders/textured.frag", GL_FRAGMENT_SHADER);
         menuMaterial->shader->link();
         // Then we load the menu texture
+        std::cout << "Menustate::onInitialize - Loading Menu Texture" << std::endl;
         menuMaterial->texture = our::texture_utils::loadImage("assets/textures/menu.png");
         // Initially, the menu material will be black, then it will fade in
         menuMaterial->tint = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -127,6 +130,8 @@ class Menustate: public our::State {
             buttons[i].position = { x, y };
             buttons[i].size = { w, h };
         }
+        
+        std::cout << "Menustate::onInitialize - End" << std::endl;
     }
 
     void onDraw(double deltaTime) override {

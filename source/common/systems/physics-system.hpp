@@ -29,6 +29,9 @@ namespace our {
         // Initialize the physics world
         void initialize(const glm::vec3& gravityVec = glm::vec3(0.0f, -9.81f, 0.0f));
         
+        // Clean up the physics world
+        void destroy();
+        
         // Register a collider with the physics world
         void registerCollider(BulletColliderComponent* collider);
         

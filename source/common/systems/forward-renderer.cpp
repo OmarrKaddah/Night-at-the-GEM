@@ -153,38 +153,77 @@ namespace our {
     }
 
     void ForwardRenderer::destroy(){
+        std::cout << "ForwardRenderer::destroy - Start" << std::endl;
+        
         // Delete all objects related to the sky
         if(skyMaterial){
+            std::cout << "ForwardRenderer::destroy - Deleting Sky Sphere" << std::endl;
             delete skySphere; skySphere = nullptr;
+            std::cout << "ForwardRenderer::destroy - Deleting Sky Shader" << std::endl;
             delete skyMaterial->shader;
+            std::cout << "ForwardRenderer::destroy - Deleting Sky Texture" << std::endl;
             delete skyMaterial->texture;
+            std::cout << "ForwardRenderer::destroy - Deleting Sky Sampler" << std::endl;
             delete skyMaterial->sampler;
+            std::cout << "ForwardRenderer::destroy - Deleting Sky Material" << std::endl;
             delete skyMaterial; skyMaterial = nullptr;
         }
+        
         // Delete all objects related to post processing
         if(!postprocessMaterials.empty()){
+            std::cout << "ForwardRenderer::destroy - Deleting Framebuffers" << std::endl;
             glDeleteFramebuffers(1, &postprocessFrameBuffer); postprocessFrameBuffer = 0;
             glDeleteFramebuffers(1, &postprocessFrameBuffer2); postprocessFrameBuffer2 = 0;
             glDeleteVertexArrays(1, &postProcessVertexArray); postProcessVertexArray = 0;
             
+            std::cout << "ForwardRenderer::destroy - Deleting Color/Depth Targets" << std::endl;
             delete colorTarget; colorTarget = nullptr;
             delete depthTarget; depthTarget = nullptr;
             delete colorTarget2; colorTarget2 = nullptr;
             
             // Delete materials
-            for(auto mat : postprocessMaterials) {
+            std::cout << "ForwardRenderer::destroy - Deleting Postprocess Materials" << std::endl;
+            
+            // All postprocess materials share the same sampler, so we need to delete it only once
+            // We'll grab it from the first material (if it exists) and delete it after the loop.
+            Sampler* sharedSampler = nullptr;
+            if(!postprocessMaterials.empty() && postprocessMaterials[0]) {
+                sharedSampler = postprocessMaterials[0]->sampler;
+            }
+
+            for(size_t i = 0; i < postprocessMaterials.size(); ++i) {
+                auto mat = postprocessMaterials[i];
                 if(mat) {
-                    delete mat->sampler;
-                    delete mat->shader;
+                    std::cout << "ForwardRenderer::destroy - Material " << i << " Addr: " << mat << std::endl;
+                    
+                    if(mat->shader) { 
+                        std::cout << "ForwardRenderer::destroy - Deleting Shader " << i << " Addr: " << mat->shader << std::endl;
+                        delete mat->shader; 
+                    } else {
+                        std::cout << "ForwardRenderer::destroy - Shader " << i << " is NULL" << std::endl;
+                    }
+                    
+                    std::cout << "ForwardRenderer::destroy - Deleting Material Object " << i << std::endl;
                     delete mat;
                 }
             }
+            
+            if(sharedSampler) {
+                 std::cout << "ForwardRenderer::destroy - Deleting Shared Postprocess Sampler " << sharedSampler << std::endl;
+                 delete sharedSampler;
+            }
+            
+            std::cout << "ForwardRenderer::destroy - Clearing Vector" << std::endl;
             postprocessMaterials.clear();
         }
+        
         if(debugLineShader){
+            std::cout << "ForwardRenderer::destroy - Deleting Debug Shader" << std::endl;
             delete debugLineShader;
             debugLineShader = nullptr;
         }
+        
+        std::cout << "ForwardRenderer::destroy - End" << std::endl;
     }
 
     void ForwardRenderer::render(World* world) {

@@ -48,6 +48,12 @@ namespace our
             floor2Grid = f2Grid;
             stairWaypoints = stairs;
         }
+
+        // Cleanup zombie states so we don't hold invalid entity pointers
+        void destroy() {
+            states.clear();
+            cachedPlayer = nullptr;
+        }
         
         // Determine which floor based on Y position
         int getFloor(float y) const {
