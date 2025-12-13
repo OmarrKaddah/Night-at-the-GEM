@@ -48,6 +48,9 @@ class Menustate: public our::State {
     std::array<Button, 3> buttons;
     // Normalized button rects (x, y, width, height) as fractions of the framebuffer size
     glm::vec4 buttonNorms[3];
+    // Variables for transition
+    bool transitionOut = false;
+    float transitionTime = 0.0f;
 
     void onInitialize() override {
         // First, we create a material for the menu's background
@@ -91,6 +94,8 @@ class Menustate: public our::State {
 
         // Reset the time elapsed since the state is entered.
         time = 0;
+        transitionOut = false;
+        transitionTime = 0.0f;
 
         // Fill the positions, sizes and actions for the menu buttons
         // Note that we use lambda expressions to set the actions of the buttons.
@@ -108,7 +113,7 @@ class Menustate: public our::State {
         buttonNorms[2] = {0.435f, 0.675f, 0.095f, 0.07f}; // EXIT
 
         // Assign actions
-        buttons[0].action = [this](){ this->getApp()->changeState("play"); };
+        buttons[0].action = [this](){ this->transitionOut = true; };
         buttons[1].action = [this](){ std::cout << "Options selected" << std::endl; };
         buttons[2].action = [this](){ this->getApp()->close(); };
 
@@ -129,8 +134,8 @@ class Menustate: public our::State {
         auto& keyboard = getApp()->getKeyboard();
 
         if(keyboard.justPressed(GLFW_KEY_SPACE)){
-            // If the space key is pressed in this frame, go to the play state
-            getApp()->changeState("play");
+            // If the space key is pressed in this frame, start transition
+            transitionOut = true;
         } else if(keyboard.justPressed(GLFW_KEY_ESCAPE)) {
             // If the escape key is pressed in this frame, exit the game
             getApp()->close();
@@ -166,7 +171,17 @@ class Menustate: public our::State {
 
         // First, we apply the fading effect.
         time += (float)deltaTime;
-        menuMaterial->tint = glm::vec4(glm::smoothstep(0.00f, 2.00f, time));
+        
+        if (transitionOut) {
+            transitionTime += (float)deltaTime;
+            menuMaterial->tint = glm::vec4(1.0f - glm::smoothstep(0.0f, 1.0f, transitionTime));
+            if (transitionTime >= 1.0f) {
+                getApp()->changeState("loading");
+            }
+        } else {
+            menuMaterial->tint = glm::vec4(glm::smoothstep(0.00f, 2.00f, time));
+        }
+
         // Then we render the menu background
         // Notice that I don't clear the screen first, since I assume that the menu rectangle will draw over the whole
         // window anyway.

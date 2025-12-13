@@ -175,7 +175,7 @@ int our::Application::run(int run_for_frames) {
     // If it should be fullscreen, monitor should point to one of the monitors (e.g. primary monitor), otherwise it should be null
     GLFWmonitor* monitor = win_config.isFullscreen ? glfwGetPrimaryMonitor() : nullptr;
     // The last parameter "share" can be used to share the resources (OpenGL objects) between multiple windows.
-    window = glfwCreateWindow(win_config.size.x, win_config.size.y, "El Harb El 3alameya El Talta: Night at the GEM", monitor, nullptr);
+    window = glfwCreateWindow(win_config.size.x, win_config.size.y, "El Harb El 3alameya El Talta: Night at the Hintze Hall", monitor, nullptr);
     if (!window) {
         std::cerr << "Failed to Create Window" << std::endl;
         glfwTerminate();
