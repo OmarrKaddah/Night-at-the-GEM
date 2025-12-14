@@ -167,7 +167,7 @@ namespace our {
                         int id = it->second;
                         if (id >= 0 && id < (int)jointTransforms.size()) {
                             glm::vec4 p = jointTransforms[id] * glm::vec4(0,0,0,1);
-                            std::cout << "Joint " << name << " (" << id << ") pos: (" << p.x << "," << p.y << "," << p.z << ")" << std::endl;
+                            std::cout << "Joint TESTTT " << name << " (" << id << ") pos: (" << p.x << "," << p.y << "," << p.z << ")" << std::endl;
                         }
                     }
                 };

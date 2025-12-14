@@ -7,6 +7,10 @@ if(UNIX AND NOT APPLE)
         find_package(GLEW REQUIRED)
 endif()
 
+if (MSVC)
+    add_compile_definitions(_ITERATOR_DEBUG_LEVEL=0)
+endif()
+
 # Here we select C++17 with all the standards required and all compiler-specific extensions disabled
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -112,6 +116,8 @@ set(COMMON_SOURCES
         source/common/components/bullet-collider.cpp
         source/common/components/light.hpp
         source/common/components/light.cpp
+        source/common/components/health.hpp
+        source/common/components/health.cpp
         source/common/components/component-deserializer.hpp
 
         source/common/systems/forward-renderer.hpp
@@ -121,6 +127,8 @@ set(COMMON_SOURCES
         source/common/systems/animation-system.cpp
         source/common/systems/physics-system.hpp
         source/common/systems/physics-system.cpp
+        source/common/systems/weapon-system.hpp
+        source/common/systems/weapon-system.cpp
         source/common/systems/free-camera-controller.hpp
         source/common/systems/movement.hpp
         source/common/systems/animation-system.cpp

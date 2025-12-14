@@ -3,6 +3,7 @@
 #include "../ecs/world.hpp"
 #include "../components/animator.hpp"
 #include "../components/bullet-collider.hpp"
+#include "../components/health.hpp"
 #include "../navigation/nav-grid-2d.hpp"
 #include "../navigation/pathfinder-2d.hpp"
 #include <glm/glm.hpp>
@@ -31,8 +32,17 @@ namespace our
             float pathTimer = 0.0f;
             glm::vec3 lastPosition = glm::vec3(0);
             float stuckTimer = 0.0f;
+            bool dead = false;
+            float respawnTimer = 0.0f;
+
+            bool spawnSaved = false;
+            glm::vec3 spawnPosition = glm::vec3(0);
+            glm::vec3 spawnRotation = glm::vec3(0);
+            glm::vec3 spawnScale = glm::vec3(1);
         };
         std::unordered_map<Entity*, ZombieState> states;
+
+        float respawnDelaySeconds = 10.0f;
         
     public:
         struct StairWaypoint {
@@ -89,6 +99,75 @@ namespace our
                 if(entity->name.find("Zombie") != 0) continue;
                 
                 auto& state = states[entity];
+
+                if(!state.spawnSaved) {
+                    state.spawnSaved = true;
+                    state.spawnPosition = entity->localTransform.position;
+                    state.spawnRotation = entity->localTransform.rotation;
+                    state.spawnScale = entity->localTransform.scale;
+                }
+
+                // If zombie has 0 health, play death animation once and stop movement.
+                if(auto* health = entity->getComponent<HealthComponent>()) {
+                    if(health->isDead()) {
+                        if(!state.dead) {
+                            state.dead = true;
+                            state.path.clear();
+                            state.pathIndex = 0;
+                            state.pathTimer = 0.0f;
+                            state.stuckTimer = 0.0f;
+
+                            if(auto* animator = entity->getComponent<AnimatorComponent>()) {
+                                animator->playAnimation("death", false);
+                            }
+
+                            if(auto* collider = entity->getComponent<BulletColliderComponent>()) {
+                                if(collider->rigidBody) {
+                                    collider->rigidBody->setLinearVelocity(btVector3(0, 0, 0));
+                                    collider->rigidBody->setAngularVelocity(btVector3(0, 0, 0));
+                                    collider->rigidBody->setLinearFactor(btVector3(0, 0, 0));
+                                    collider->rigidBody->setAngularFactor(btVector3(0, 0, 0));
+                                }
+                            }
+
+                            std::cout << entity->name << " died." << std::endl;
+                            state.respawnTimer = respawnDelaySeconds;
+                        } else {
+                            state.respawnTimer -= deltaTime;
+                        }
+
+                        if(state.respawnTimer > 0.0f) continue;
+
+                        // Respawn
+                        state.dead = false;
+                        state.respawnTimer = 0.0f;
+                        state.path.clear();
+                        state.pathIndex = 0;
+                        state.pathTimer = 0.0f;
+                        state.stuckTimer = 0.0f;
+
+                        health->currentHealth = health->maxHealth;
+                        entity->localTransform.position = state.spawnPosition;
+                        entity->localTransform.rotation = state.spawnRotation;
+                        entity->localTransform.scale = state.spawnScale;
+
+                        if(auto* collider = entity->getComponent<BulletColliderComponent>()) {
+                            if(collider->rigidBody) {
+                                collider->rigidBody->setLinearFactor(btVector3(1, 1, 1));
+                                collider->rigidBody->setAngularFactor(btVector3(0, 1, 0));
+                                collider->rigidBody->activate(true);
+                            }
+                            collider->syncFromEntity();
+                        }
+
+                        if(auto* animator = entity->getComponent<AnimatorComponent>()) {
+                            animator->playAnimation("walk", true);
+                        }
+
+                        std::cout << entity->name << " respawned." << std::endl;
+                    }
+                }
+
                 state.pathTimer -= deltaTime;
                 
                 glm::vec3 zombiePos = entity->localTransform.position;

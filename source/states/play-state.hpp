@@ -8,7 +8,9 @@
 #include <systems/movement.hpp>
 #include <systems/physics-system.hpp>
 #include <systems/animation-system.hpp>
+#include <systems/weapon-system.hpp>
 #include <components/animator.hpp>
+#include <components/health.hpp>
 #include <systems/zombie-system.hpp>
 #include <asset-loader.hpp>
 #include <fstream>
@@ -24,6 +26,7 @@ class Playstate: public our::State {
     our::MovementSystem movementSystem;
     our::PhysicsSystem physicsSystem;
     our::AnimationSystem animationSystem;
+    our::WeaponSystem weaponSystem;
     our::ZombieSystem zombieSystem;
     our::NavGrid2D floor0Grid;
     our::NavGrid2D floor1Grid;
@@ -35,6 +38,9 @@ class Playstate: public our::State {
     float playerHealth = 100.0f;
     float maxHealth = 100.0f;
     float invulnerabilityTimer = 0.0f;
+    float healthRegenCooldown = 0.0f;
+    float healthRegenDelay = 3.0f;     // seconds after taking damage before regen starts
+    float healthRegenRate = 6.0f;      // health per second
     float blurTimer = 0.0f;      // Timer for blur effect
     float gameOverTimer = 0.0f;  // Timer before switching state on death
     bool isDead = false;
@@ -61,6 +67,7 @@ class Playstate: public our::State {
         // Initialize physics system with gravity
         physicsSystem.initialize(glm::vec3(0.0f, -9.8f, 0.0f));
         physicsSystem.registerWorldColliders(&world);
+        weaponSystem.enter(getApp(), &physicsSystem);
         
         // Initialize navigation grids
         if (config.contains("navigation")) {
@@ -157,6 +164,7 @@ class Playstate: public our::State {
         playerHealth = maxHealth;
         isDead = false;
         invulnerabilityTimer = 0.0f;
+        healthRegenCooldown = 0.0f;
 
         // Create UI Rectangle (1x1)
 
@@ -181,6 +189,8 @@ class Playstate: public our::State {
             healthBarMaterial->tint = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f); // Red
             healthBarMaterial->pipelineState.depthTesting.enabled = false; // Always on top
             healthBarMaterial->pipelineState.blending.enabled = true;
+            healthBarMaterial->pipelineState.blending.sourceFactor = GL_SRC_ALPHA;
+            healthBarMaterial->pipelineState.blending.destinationFactor = GL_ONE_MINUS_SRC_ALPHA;
         }
 
         if (!healthBgMaterial) {
@@ -218,8 +228,10 @@ class Playstate: public our::State {
                 if(glm::length(delta) < 10.0f) delta = glm::vec2(0.0f); 
                 
                 glm::vec3 rotation = entity->localTransform.rotation;
-                rotation.x -= delta.y * 0.01f;
-                rotation.y -= delta.x * 0.01f;
+                float lookSensitivity = 0.01f;
+                if(weaponSystem.isAiming()) lookSensitivity *= 0.5f;
+                rotation.x -= delta.y * lookSensitivity;
+                rotation.y -= delta.x * lookSensitivity;
                 
                 // Clamp pitch to prevent flipping
                 if(rotation.x < -glm::half_pi<float>() * 0.99f) rotation.x = -glm::half_pi<float>() * 0.99f;
@@ -267,6 +279,7 @@ class Playstate: public our::State {
         // cameraController.update(&world, (float)deltaTime); // DISABLED
         
         // Update Zombie AI
+        weaponSystem.update(&world, (float)deltaTime);
         zombieSystem.update(&world, (float)deltaTime);
         
         // Update animations (Calculate bone positions)
@@ -284,8 +297,8 @@ class Playstate: public our::State {
             }
         }
         
-        // MANUAL COORDINATE LOGGING: Left-click to print current position
-        if (mouse.isPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+        // MANUAL COORDINATE LOGGING: Press F1 to print current position
+        if (kb.justPressed(GLFW_KEY_F1)) {
             for (auto* entity : world.getEntities()) {
                 if (entity->name == "PlayerCamera") {
                     // Log to console
@@ -363,10 +376,14 @@ class Playstate: public our::State {
         
         if(playerFound && invulnerabilityTimer <= 0.0f && !isDead) { // Don't take damage if dead
              for(auto entity : world.getEntities()) {
-                if(entity->name.find("Zombie") != std::string::npos) {
-                    glm::vec3 zombiePos = entity->localTransform.position;
-                    // Adjust zombie pos for center offset (approx 1.0 up)
-                    zombiePos.y += 1.0f; 
+                 if(entity->name.find("Zombie") != std::string::npos) {
+                     if(auto* health = entity->getComponent<our::HealthComponent>()) {
+                         if(health->isDead()) continue;
+                     }
+
+                     glm::vec3 zombiePos = entity->localTransform.position;
+                     // Adjust zombie pos for center offset (approx 1.0 up)
+                     zombiePos.y += 1.0f; 
                     
                     float dist = glm::distance(playerPos, zombiePos);
                     
@@ -377,15 +394,27 @@ class Playstate: public our::State {
                         playerHealth -= damage;
                         if(playerHealth < 0.0f) playerHealth = 0.0f;
                         
-                        invulnerabilityTimer = 1.0f; // 1 second immunity
-                        
-                        // Trigger Blur
-                        blurTimer = 0.5f; 
-                        
-                        std::cout << "!!! DAMAGE TAKEN !!! Health: " << playerHealth << "/" << maxHealth << std::endl;
-                    }
+                         invulnerabilityTimer = 1.0f; // 1 second immunity
+                         healthRegenCooldown = healthRegenDelay;
+                         
+                         // Trigger Blur
+                         blurTimer = 0.5f; 
+                         
+                         std::cout << "!!! DAMAGE TAKEN !!! Health: " << playerHealth << "/" << maxHealth << std::endl;
+                     }
                 }
              }
+        }
+
+        // Health regeneration (out of combat)
+        if(!isDead) {
+            if(healthRegenCooldown > 0.0f) {
+                healthRegenCooldown -= (float)deltaTime;
+                if(healthRegenCooldown < 0.0f) healthRegenCooldown = 0.0f;
+            } else if(playerHealth < maxHealth) {
+                playerHealth += healthRegenRate * (float)deltaTime;
+                if(playerHealth > maxHealth) playerHealth = maxHealth;
+            }
         }
 
         // Update Post-Process Uniforms
@@ -408,8 +437,8 @@ class Playstate: public our::State {
 
         // And finally we use the renderer system to draw the scene
         renderer.render(&world);
-        
-        // --- Render Health Bar ---
+         
+        // --- Render UI (Health + Crosshair) ---
         {
             // Setup Ortho Projection for UI
             glm::ivec2 size = getApp()->getFrameBufferSize();
@@ -452,6 +481,32 @@ class Playstate: public our::State {
                 
                 healthBarMaterial->setup();
                 healthBarMaterial->shader->set("transform", VP*M2);
+                uiRectangle->draw();
+            }
+
+            // 3. Draw Crosshair (center of screen)
+            {
+                float centerX = size.x * 0.5f;
+                float centerY = size.y * 0.5f;
+
+                bool aiming = weaponSystem.isAiming();
+                float length = aiming ? 6.0f : 10.0f;
+                float thickness = 2.0f;
+                float alpha = aiming ? 0.9f : 0.75f;
+
+                healthBarMaterial->tint = glm::vec4(1.0f, 1.0f, 1.0f, alpha);
+                healthBarMaterial->setup();
+
+                // Horizontal line
+                glm::mat4 H = glm::translate(glm::mat4(1.0f), glm::vec3(centerX - length, centerY - thickness * 0.5f, 0.0f)) *
+                              glm::scale(glm::mat4(1.0f), glm::vec3(length * 2.0f, thickness, 1.0f));
+                healthBarMaterial->shader->set("transform", VP*H);
+                uiRectangle->draw();
+
+                // Vertical line
+                glm::mat4 V = glm::translate(glm::mat4(1.0f), glm::vec3(centerX - thickness * 0.5f, centerY - length, 0.0f)) *
+                              glm::scale(glm::mat4(1.0f), glm::vec3(thickness, length * 2.0f, 1.0f));
+                healthBarMaterial->shader->set("transform", VP*V);
                 uiRectangle->draw();
             }
         }

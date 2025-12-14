@@ -142,12 +142,32 @@ namespace our {
     bool PhysicsSystem::raycast(const glm::vec3& start, const glm::vec3& end,
                                 glm::vec3& hitPoint, glm::vec3& hitNormal,
                                 BulletColliderComponent** hitCollider) {
+        return raycast(start, end, hitPoint, hitNormal, hitCollider, nullptr);
+    }
+
+    bool PhysicsSystem::raycast(const glm::vec3& start, const glm::vec3& end,
+                                glm::vec3& hitPoint, glm::vec3& hitNormal,
+                                BulletColliderComponent** hitCollider,
+                                const btCollisionObject* ignore) {
         if (!dynamicsWorld) return false;
         
         btVector3 btStart(start.x, start.y, start.z);
         btVector3 btEnd(end.x, end.y, end.z);
         
-        btCollisionWorld::ClosestRayResultCallback rayCallback(btStart, btEnd);
+        struct ClosestNotMeCallback : btCollisionWorld::ClosestRayResultCallback {
+            const btCollisionObject* ignore = nullptr;
+            ClosestNotMeCallback(const btVector3& from, const btVector3& to, const btCollisionObject* ignore)
+                : btCollisionWorld::ClosestRayResultCallback(from, to), ignore(ignore) {}
+
+            btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult, bool normalInWorldSpace) override {
+                if(ignore && rayResult.m_collisionObject == ignore) {
+                    return 1.0f;
+                }
+                return btCollisionWorld::ClosestRayResultCallback::addSingleResult(rayResult, normalInWorldSpace);
+            }
+        };
+
+        ClosestNotMeCallback rayCallback(btStart, btEnd, ignore);
         dynamicsWorld->rayTest(btStart, btEnd, rayCallback);
         
         if (rayCallback.hasHit()) {

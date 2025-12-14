@@ -666,19 +666,6 @@
                 "type": "Mesh Renderer",
                 "mesh": "gun",
                 "material": "Material.001" // fallback only; submeshes override this
-              },
-              // Gun collider restored as trigger
-              {
-                "type": "Bullet Collider",
-                "shape": "box",
-                "size": [
-                  0.1,
-                  0.1,
-                  0.3
-                ],
-                "mass": 0.5,
-                "friction": 0.5,
-                "isTrigger": true
               }
             ]
           }
@@ -752,6 +739,11 @@
             "isPlaying": true
           },
           {
+            "type": "Health",
+            "maxHealth": 100.0,
+            "currentHealth": 100.0
+          },
+          {
             "type": "Bullet Collider",
             "shape": "capsule",
             "size": [
@@ -806,6 +798,11 @@
             "isPlaying": true
           },
           {
+            "type": "Health",
+            "maxHealth": 100.0,
+            "currentHealth": 100.0
+          },
+          {
             "type": "Bullet Collider",
             "shape": "capsule",
             "size": [
@@ -858,6 +855,11 @@
             "speed": 1.0,
             "loop": true,
             "isPlaying": true
+          },
+          {
+            "type": "Health",
+            "maxHealth": 100.0,
+            "currentHealth": 100.0
           },
           {
             "type": "Bullet Collider",
