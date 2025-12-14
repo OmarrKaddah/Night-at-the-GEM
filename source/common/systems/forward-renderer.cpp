@@ -227,12 +227,13 @@ namespace our {
     }
 
     void ForwardRenderer::render(World* world) {
-        // 1) Find camera & collect render commands 
+        // 1) Find camera & collect render commands and lights
         CameraComponent* camera = nullptr;
         opaqueCommands.clear();
         transparentCommands.clear();
+        std::vector<LightComponent*> lights; // Collect lights (not used yet)
 
-        // Loop through entities to find camera and mesh renderers
+        // Loop through entities to find camera, mesh renderers, and lights
         for (auto entity : world->getEntities()) {
             // If no camera yet, try to get one
             if (!camera) camera = entity->getComponent<CameraComponent>();
@@ -253,6 +254,11 @@ namespace our {
                     transparentCommands.push_back(command);
                 else
                     opaqueCommands.push_back(command);
+            }
+
+            // Collect lights (Step 2: collect but don't use yet)
+            if (auto light = entity->getComponent<LightComponent>()) {
+                lights.push_back(light);
             }
         }
 
@@ -295,6 +301,9 @@ namespace our {
         // Clear color and depth
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // Get camera position for lighting
+        glm::vec3 cameraPos = glm::vec3(cameraWorld * glm::vec4(0, 0, 0, 1));
+
         // === 5) Draw opaque objects ==========================================
         for (const auto& cmd : opaqueCommands) {
             
@@ -311,6 +320,43 @@ namespace our {
                     matToUse->setup();
                     matToUse->shader->use();
                     matToUse->shader->set("transform", VP * cmd.localToWorld);
+
+                    // For lit materials, send lighting data
+                    if (dynamic_cast<LitMaterial*>(matToUse)) {
+                        matToUse->shader->set("model", cmd.localToWorld);
+                        matToUse->shader->set("model_IT", glm::transpose(glm::inverse(cmd.localToWorld)));
+                        
+                        // Send lights
+                        int lightCount = std::min((int)lights.size(), 8);
+                        matToUse->shader->set("light_count", lightCount);
+                        
+                        for (int i = 0; i < lightCount; i++) {
+                            auto* light = lights[i];
+                            std::string lightPrefix = "lights[" + std::to_string(i) + "]";
+                            matToUse->shader->set(lightPrefix + ".type", (int)light->lightType);
+                            matToUse->shader->set(lightPrefix + ".color", light->color);
+                            matToUse->shader->set(lightPrefix + ".constant", light->attenuation_constant);
+                            matToUse->shader->set(lightPrefix + ".linear", light->attenuation_linear);
+                            matToUse->shader->set(lightPrefix + ".quadratic", light->attenuation_quadratic);
+                            matToUse->shader->set(lightPrefix + ".inner_angle", cos(light->inner_angle));
+                            matToUse->shader->set(lightPrefix + ".outer_angle", cos(light->outer_angle));
+                            
+                            if (light->lightType == LightType::DIRECTIONAL) {
+                                matToUse->shader->set(lightPrefix + ".direction", light->getDirection());
+                                matToUse->shader->set(lightPrefix + ".position", glm::vec3(0.0f));
+                            } else {
+                                matToUse->shader->set(lightPrefix + ".position", light->getPosition());
+                                if (light->lightType == LightType::SPOT) {
+                                    matToUse->shader->set(lightPrefix + ".direction", light->getDirection());
+                                } else {
+                                    matToUse->shader->set(lightPrefix + ".direction", glm::vec3(0.0f));
+                                }
+                            }
+                        }
+                        
+                        matToUse->shader->set("camera_pos", cameraPos);
+                        matToUse->shader->set("ambient_light", glm::vec3(0.02f, 0.02f, 0.02f));
+                    }
 
                     // OPTIMIZED SKINNING DATA
                     if (cmd.animator && !cmd.animator->boneTransforms.empty()) {
@@ -329,6 +375,43 @@ namespace our {
                 cmd.material->setup();
                 cmd.material->shader->use();
                 cmd.material->shader->set("transform", VP * cmd.localToWorld);
+
+                // For lit materials, send lighting data
+                if (dynamic_cast<LitMaterial*>(cmd.material)) {
+                    cmd.material->shader->set("model", cmd.localToWorld);
+                    cmd.material->shader->set("model_IT", glm::transpose(glm::inverse(cmd.localToWorld)));
+                    
+                    // Send lights
+                    int lightCount = std::min((int)lights.size(), 8);
+                    cmd.material->shader->set("light_count", lightCount);
+                    
+                    for (int i = 0; i < lightCount; i++) {
+                        auto* light = lights[i];
+                        std::string lightPrefix = "lights[" + std::to_string(i) + "]";
+                        cmd.material->shader->set(lightPrefix + ".type", (int)light->lightType);
+                        cmd.material->shader->set(lightPrefix + ".color", light->color);
+                        cmd.material->shader->set(lightPrefix + ".constant", light->attenuation_constant);
+                        cmd.material->shader->set(lightPrefix + ".linear", light->attenuation_linear);
+                        cmd.material->shader->set(lightPrefix + ".quadratic", light->attenuation_quadratic);
+                        cmd.material->shader->set(lightPrefix + ".inner_angle", cos(light->inner_angle));
+                        cmd.material->shader->set(lightPrefix + ".outer_angle", cos(light->outer_angle));
+                        
+                        if (light->lightType == LightType::DIRECTIONAL) {
+                            cmd.material->shader->set(lightPrefix + ".direction", light->getDirection());
+                            cmd.material->shader->set(lightPrefix + ".position", glm::vec3(0.0f));
+                        } else {
+                            cmd.material->shader->set(lightPrefix + ".position", light->getPosition());
+                            if (light->lightType == LightType::SPOT) {
+                                cmd.material->shader->set(lightPrefix + ".direction", light->getDirection());
+                            } else {
+                                cmd.material->shader->set(lightPrefix + ".direction", glm::vec3(0.0f));
+                            }
+                        }
+                    }
+                    
+                    cmd.material->shader->set("camera_pos", cameraPos);
+                    cmd.material->shader->set("ambient_light", glm::vec3(0.02f, 0.02f, 0.02f));
+                }
 
                 if (cmd.animator && !cmd.animator->boneTransforms.empty()) {
                     cmd.material->shader->set("useSkinning", true);
