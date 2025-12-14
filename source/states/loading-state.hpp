@@ -184,7 +184,7 @@ class LoadingState: public our::State {
             barMaterial->shader->link();
             
             // Use menu highlight color (Gold/Yellowish with transparency)
-            barMaterial->tint = glm::vec4(1.0f, 0.92f, 0.6f, 0.45f);
+            barMaterial->tint = glm::vec4(0.0f, 0.92f, 0.6f, 0.45f);
             
             barMaterial->pipelineState.blending.enabled = true;
             barMaterial->pipelineState.blending.equation = GL_FUNC_ADD;

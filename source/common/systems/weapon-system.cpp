@@ -130,9 +130,12 @@ void WeaponSystem::update(World* world, float deltaTime) {
         if(!hitEntity) return;
 
         if (auto* health = hitEntity->getComponent<HealthComponent>()) {
+            bool wasAlive = !health->isDead();
             health->applyDamage(damage);
 
-            if(!health->isDead()) {
+            if(wasAlive && health->isDead()) {
+                if(killCounter) (*killCounter)++;
+            } else if(!health->isDead()) {
                 if(auto* animator = hitEntity->getComponent<AnimatorComponent>()) {
                     if(animator->animations.find("hit") != animator->animations.end()) {
                         animator->playAnimation("hit", false);

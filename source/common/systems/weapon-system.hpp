@@ -16,6 +16,7 @@ private:
     Application* app = nullptr;
     PhysicsSystem* physics = nullptr;
     Entity* cachedPlayerCamera = nullptr;
+    int* killCounter = nullptr;
 
     float damage = 25.0f;
     float range  = 100.0f;
@@ -31,6 +32,7 @@ private:
 
 public:
     void enter(Application* app, PhysicsSystem* physicsSystem);
+    void setKillCounter(int* counter) { killCounter = counter; }
     void update(World* world, float deltaTime);
 
     [[nodiscard]] bool isAiming() const;

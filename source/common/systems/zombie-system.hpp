@@ -43,8 +43,13 @@ namespace our
         std::unordered_map<Entity*, ZombieState> states;
 
         float respawnDelaySeconds = 10.0f;
-        
+
     public:
+        void setRespawnDelaySeconds(float seconds) {
+            respawnDelaySeconds = (seconds < 0.5f) ? 0.5f : seconds;
+        }
+        [[nodiscard]] float getRespawnDelaySeconds() const { return respawnDelaySeconds; }
+
         struct StairWaypoint {
             glm::vec3 position;
             int targetFloor;

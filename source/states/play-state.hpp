@@ -14,6 +14,7 @@
 #include <systems/zombie-system.hpp>
 #include <asset-loader.hpp>
 #include <fstream>
+#include <cstdio>
 #include <material/material.hpp>
 #include <mesh/mesh.hpp>
 
@@ -34,6 +35,18 @@ class Playstate: public our::State {
     bool first_frame = true;
     float previousPlayerY = 0.0f;  // Track Y position for stair detection
 
+    // Win/Lose + Rounds
+    enum class GameOutcome { None, Win, Lose };
+    GameOutcome outcome = GameOutcome::None;
+    int kills = 0;
+    int currentRound = 1;
+    int roundsCompleted = 0; // rounds fully survived
+    int roundsSurvivedAtEnd = 0;
+    int killsAtEnd = 0;
+    float roundTimer = 0.0f;
+    float roundDurationSeconds = 45.0f;
+    int totalRoundsToWin = 5;
+
     // Health System
     float playerHealth = 100.0f;
     float maxHealth = 100.0f;
@@ -49,6 +62,22 @@ class Playstate: public our::State {
     our::Mesh* uiRectangle = nullptr;
     our::TintedMaterial* healthBarMaterial = nullptr;
     our::TintedMaterial* healthBgMaterial = nullptr;
+
+    float respawnDelayForRound(int round) const {
+        // Round 1: 10s, then ramps down each round (faster respawns = higher spawn rate)
+        float delay = 10.0f - (float)(round - 1) * 1.5f;
+        if(delay < 2.0f) delay = 2.0f;
+        return delay;
+    }
+
+    void endGame(GameOutcome newOutcome) {
+        if(outcome != GameOutcome::None) return;
+        outcome = newOutcome;
+        roundsSurvivedAtEnd = roundsCompleted;
+        killsAtEnd = kills;
+        isDead = (newOutcome == GameOutcome::Lose);
+        our::Mouse::unlockMouse(getApp()->getWindow());
+    }
 
     void onInitialize() override {
         // First of all, we get the scene configuration from the app config
@@ -68,6 +97,17 @@ class Playstate: public our::State {
         physicsSystem.initialize(glm::vec3(0.0f, -9.8f, 0.0f));
         physicsSystem.registerWorldColliders(&world);
         weaponSystem.enter(getApp(), &physicsSystem);
+        weaponSystem.setKillCounter(&kills);
+
+        // Game loop state
+        outcome = GameOutcome::None;
+        kills = 0;
+        currentRound = 1;
+        roundsCompleted = 0;
+        roundsSurvivedAtEnd = 0;
+        killsAtEnd = 0;
+        roundTimer = roundDurationSeconds;
+        zombieSystem.setRespawnDelaySeconds(respawnDelayForRound(currentRound));
         
         // Initialize navigation grids
         if (config.contains("navigation")) {
@@ -205,14 +245,17 @@ class Playstate: public our::State {
     }
 
     void onDraw(double deltaTime) override {
+        float dt = (float)deltaTime;
+
         // Handle mouse rotation and keyboard movement for camera
         auto& mouse = getApp()->getMouse();
         auto& kb = getApp()->getKeyboard();
+        bool gameplayActive = (outcome == GameOutcome::None);
         
         // Lock mouse on startup
 
         
-        for(auto entity : world.getEntities()){
+        if(gameplayActive) for(auto entity : world.getEntities()){
             auto* collider = entity->getComponent<our::BulletColliderComponent>();
             auto* camera = entity->getComponent<our::CameraComponent>();
             // Only apply mouse rotation to entities with a camera
@@ -279,15 +322,17 @@ class Playstate: public our::State {
         // cameraController.update(&world, (float)deltaTime); // DISABLED
         
         // Update Zombie AI
-        weaponSystem.update(&world, (float)deltaTime);
-        zombieSystem.update(&world, (float)deltaTime);
+        if(gameplayActive) {
+            weaponSystem.update(&world, dt);
+            zombieSystem.update(&world, dt);
+        }
         
         // Update animations (Calculate bone positions)
-        animationSystem.update(&world, (float)deltaTime);
-        
+        animationSystem.update(&world, dt);
+         
 
         // Update physics simulation (this applies collision response)
-        physicsSystem.update((float)deltaTime);
+        physicsSystem.update(dt);
         
         // Sync physics results BACK to entities
         for(auto entity : world.getEntities()){
@@ -335,32 +380,36 @@ class Playstate: public our::State {
         
         // --- Health System Logic ---
         if(invulnerabilityTimer > 0.0f) {
-            invulnerabilityTimer -= (float)deltaTime;
+            invulnerabilityTimer -= dt;
         }
         
         // Blur decay
         if(blurTimer > 0.0f) {
-            blurTimer -= (float)deltaTime;
+            blurTimer -= dt;
             if(blurTimer < 0.0f) blurTimer = 0.0f;
         }
 
-        // Game Over Logic
-        if(playerHealth <= 0.0f) {
-             if(!isDead) {
-                 isDead = true;
-                 gameOverTimer = 2.0f; // Wait 2 seconds
-                 std::cout << "GAME OVER! Starting timer..." << std::endl;
-             }
-             
-             gameOverTimer -= (float)deltaTime;
-             // std::cout << "Death Timer: " << gameOverTimer << std::endl; // Debug log
-             
-             if(gameOverTimer <= 0.0f) {
-                 std::cout << "Timer finished! Switching to menu..." << std::endl;
-                 getApp()->changeState("menu");
-                 // return; // Removed to allow rendering this frame before switch
-             }
+        // Win/Lose conditions + round progression
+        if(gameplayActive) {
+            if(playerHealth <= 0.0f) {
+                endGame(GameOutcome::Lose);
+            }
+
+            roundTimer -= dt;
+            if(roundTimer <= 0.0f) {
+                roundsCompleted++;
+                if(roundsCompleted >= totalRoundsToWin) {
+                    endGame(GameOutcome::Win);
+                } else {
+                    currentRound = roundsCompleted + 1;
+                    roundTimer = roundDurationSeconds;
+                    zombieSystem.setRespawnDelaySeconds(respawnDelayForRound(currentRound));
+                    std::cout << "=== ROUND " << currentRound << " === RespawnDelay="
+                              << zombieSystem.getRespawnDelaySeconds() << "s" << std::endl;
+                }
+            }
         }
+        gameplayActive = (outcome == GameOutcome::None);
 
         glm::vec3 playerPos = glm::vec3(0.0f);
         bool playerFound = false;
@@ -374,7 +423,7 @@ class Playstate: public our::State {
             }
         }
         
-        if(playerFound && invulnerabilityTimer <= 0.0f && !isDead) { // Don't take damage if dead
+        if(gameplayActive && playerFound && invulnerabilityTimer <= 0.0f && !isDead) { // Don't take damage if dead
              for(auto entity : world.getEntities()) {
                  if(entity->name.find("Zombie") != std::string::npos) {
                      if(auto* health = entity->getComponent<our::HealthComponent>()) {
@@ -389,11 +438,11 @@ class Playstate: public our::State {
                     
                     // Collision Threshold (1.5m)
                     if(dist < 1.5f) {
-                        // Take Damage
-                        float damage = 10.0f;
-                        playerHealth -= damage;
-                        if(playerHealth < 0.0f) playerHealth = 0.0f;
-                        
+                         // Take Damage
+                         float damage = 10.0f;
+                         playerHealth -= damage;
+                         if(playerHealth < 0.0f) playerHealth = 0.0f;
+                         
                          invulnerabilityTimer = 1.0f; // 1 second immunity
                          healthRegenCooldown = healthRegenDelay;
                          
@@ -407,12 +456,12 @@ class Playstate: public our::State {
         }
 
         // Health regeneration (out of combat)
-        if(!isDead) {
+        if(gameplayActive && !isDead) {
             if(healthRegenCooldown > 0.0f) {
-                healthRegenCooldown -= (float)deltaTime;
+                healthRegenCooldown -= dt;
                 if(healthRegenCooldown < 0.0f) healthRegenCooldown = 0.0f;
             } else if(playerHealth < maxHealth) {
-                playerHealth += healthRegenRate * (float)deltaTime;
+                playerHealth += healthRegenRate * dt;
                 if(playerHealth > maxHealth) playerHealth = maxHealth;
             }
         }
@@ -490,8 +539,8 @@ class Playstate: public our::State {
                 float centerY = size.y * 0.5f;
 
                 bool aiming = weaponSystem.isAiming();
-                float length = aiming ? 6.0f : 10.0f;
-                float thickness = 2.0f;
+                float length = aiming ? 8.0f : 14.0f;
+                float thickness = 3.0f;
                 float alpha = aiming ? 0.9f : 0.75f;
 
                 healthBarMaterial->tint = glm::vec4(1.0f, 1.0f, 1.0f, alpha);
@@ -544,6 +593,68 @@ class Playstate: public our::State {
                 }
              }
         }
+    }
+
+    void onImmediateGui() override {
+        ImGuiIO& io = ImGui::GetIO();
+        ImVec2 displaySize = io.DisplaySize;
+
+        // HUD (non-interactive)
+        if(outcome == GameOutcome::None) {
+            ImGui::SetNextWindowPos(ImVec2(displaySize.x - 10.0f, 10.0f), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+            ImGui::SetNextWindowBgAlpha(0.35f);
+            ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+                                     ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs;
+            ImGui::Begin("HUD", nullptr, flags);
+            ImGui::SetWindowFontScale(1.6f);
+            ImGui::Text("Round: %d/%d", currentRound, totalRoundsToWin);
+            ImGui::Text("Time: %.0fs", roundTimer);
+            ImGui::Text("Kills: %d", kills);
+            ImGui::End();
+            return;
+        }
+
+        // Game Over / Win screen overlay
+        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+        ImGui::SetNextWindowSize(displaySize);
+        ImGui::SetNextWindowBgAlpha(0.55f);
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+                                 ImGuiWindowFlags_NoSavedSettings;
+        ImGui::Begin("GameOverOverlay", nullptr, flags);
+
+        auto centeredText = [&](float y, float scale, const char* text) {
+            ImGui::SetWindowFontScale(scale);
+            ImVec2 textSize = ImGui::CalcTextSize(text);
+            ImGui::SetCursorPos(ImVec2((displaySize.x - textSize.x) * 0.5f, y));
+            ImGui::TextUnformatted(text);
+        };
+
+        ImGui::SetWindowFontScale(1.0f);
+        centeredText(displaySize.y * 0.18f, 3.0f, "GAME OVER");
+
+        if(outcome == GameOutcome::Win) {
+            centeredText(displaySize.y * 0.30f, 2.0f, "YOU WIN! Survived the Night");
+        } else {
+            centeredText(displaySize.y * 0.30f, 2.0f, "YOU DIED");
+        }
+
+        ImGui::SetWindowFontScale(1.6f);
+        {
+            char line[128];
+            std::snprintf(line, sizeof(line), "Rounds Survived: %d", roundsSurvivedAtEnd);
+            centeredText(displaySize.y * 0.42f, 1.6f, line);
+
+            std::snprintf(line, sizeof(line), "Kills: %d", killsAtEnd);
+            centeredText(displaySize.y * 0.48f, 1.6f, line);
+        }
+
+        centeredText(displaySize.y * 0.62f, 1.3f, "Press ENTER to return to Menu");
+
+        if(ImGui::IsKeyPressed(ImGuiKey_Enter)) {
+            getApp()->changeState("menu");
+        }
+
+        ImGui::End();
     }
 
     void onDestroy() override {
