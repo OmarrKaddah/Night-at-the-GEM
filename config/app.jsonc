@@ -13,9 +13,10 @@
       "sky": "assets/textures/sky.jpg",
       "postprocess": [
         "assets/shaders/postprocess/blood.frag",
-        "assets/shaders/postprocess/blur.frag"
+        "assets/shaders/postprocess/vignette.frag"
       ]
     },
+    "nightDuration": 60.0,
     "navigation": {
       "floor0": {
         "cellSize": 0.5,
@@ -225,7 +226,14 @@
         "zombie-emission-3": "assets/textures/zombie/3/1_Emission.tga",
         "zombie-metallic-3": "assets/textures/zombie/3/1_Metallic.tga",
         "zombie-normal-3": "assets/textures/zombie/3/1_Normal.tga",
-        "zombie-occlusion-3": "assets/textures/zombie/3/1_Occlusion.tga"
+        "zombie-occlusion-3": "assets/textures/zombie/3/1_Occlusion.tga",
+        "time-12am": "assets/textures/time/12am.png",
+        "time-1am": "assets/textures/time/1am.png",
+        "time-2am": "assets/textures/time/2am.png",
+        "time-3am": "assets/textures/time/3am.png",
+        "time-4am": "assets/textures/time/4am.png",
+        "time-5am": "assets/textures/time/5am.png",
+        "time-6am": "assets/textures/time/6am.png"
       },
       "meshes": {
         "hall": "assets/models/NHMHintzeHall01.obj",
@@ -463,8 +471,16 @@
           },
           "albedo_map": "zombie-albedo-1",
           "sampler": "default",
-          "albedo": [1, 1, 1],
-          "specular": [0.2, 0.2, 0.2],
+          "albedo": [
+            1,
+            1,
+            1
+          ],
+          "specular": [
+            0.2,
+            0.2,
+            0.2
+          ],
           "roughness": 0.8,
           "ao": 1.0
         },
@@ -482,8 +498,16 @@
           },
           "albedo_map": "zombie-albedo-2",
           "sampler": "default",
-          "albedo": [1, 1, 1],
-          "specular": [0.2, 0.2, 0.2],
+          "albedo": [
+            1,
+            1,
+            1
+          ],
+          "specular": [
+            0.2,
+            0.2,
+            0.2
+          ],
           "roughness": 0.8,
           "ao": 1.0
         },
@@ -501,8 +525,16 @@
           },
           "albedo_map": "zombie-albedo-3",
           "sampler": "default",
-          "albedo": [1, 1, 1],
-          "specular": [0.2, 0.2, 0.2],
+          "albedo": [
+            1,
+            1,
+            1
+          ],
+          "specular": [
+            0.2,
+            0.2,
+            0.2
+          ],
           "roughness": 0.8,
           "ao": 1.0
         },
@@ -653,17 +685,17 @@
             "type": "Light",
             "lightType": "spot",
             "color": [
-              1.5,
-              1.43,
-              1.33
+              8.0,
+              7.5,
+              7.0
             ],
             "attenuation": {
               "constant": 1.0,
               "linear": 0.22,
               "quadratic": 0.11
             },
-            "inner_angle": 15.0,
-            "outer_angle": 75.0
+            "inner_angle": 20.0,
+            "outer_angle": 30.0
           }
         ],
         "children": [
@@ -736,6 +768,39 @@
             "mesh": "hall",
             "mass": 0
           }
+        ]
+      },
+      {
+        "name": "CeilingLight",
+        "position": [
+          0,
+          25,
+          18
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ],
+        "components": [
+          /*
+          {
+            "type": "Light",
+            "lightType": "spot",
+            "color": [
+              15.0,
+              15.5,
+              16.0
+            ],
+            "attenuation": {
+              "constant": 1.0,
+              "linear": 0.03,
+              "quadratic": 0.01
+            },
+            "inner_angle": 35.0,
+            "outer_angle": 85.0
+          }
+          */
         ]
       },
       {

@@ -12,6 +12,7 @@
 #include <systems/zombie-system.hpp>
 #include <asset-loader.hpp>
 #include <fstream>
+#include <string>
 #include <material/material.hpp>
 #include <mesh/mesh.hpp>
 
@@ -35,14 +36,23 @@ class Playstate: public our::State {
     float playerHealth = 100.0f;
     float maxHealth = 100.0f;
     float invulnerabilityTimer = 0.0f;
-    float blurTimer = 0.0f;      // Timer for blur effect
-    float gameOverTimer = 0.0f;  // Timer before switching state on death
+    // Win Condition
+    float survivalTimer = 0.0f; // Start at 0
+    float nightDuration = 300.0f; // Default 5 mins
+    bool isWin = false;
+    float clockFlashTimer = 0.0f; // Timer for clock overlay display
+    int lastHour = 12; // Track previous hour for chimes
+
+    // Missing members restored
+    float blurTimer = 0.0f;
+    float gameOverTimer = 0.0f;
     bool isDead = false;
-    
+
     // UI Resources
     our::Mesh* uiRectangle = nullptr;
     our::TintedMaterial* healthBarMaterial = nullptr;
     our::TintedMaterial* healthBgMaterial = nullptr;
+    our::TexturedMaterial* clockMaterial = nullptr;
 
     void onInitialize() override {
         // First of all, we get the scene configuration from the app config
@@ -157,8 +167,13 @@ class Playstate: public our::State {
         playerHealth = maxHealth;
         isDead = false;
         invulnerabilityTimer = 0.0f;
+        
+        // Reset Win State
+        survivalTimer = 0.0f; // Start at 0 (12:00 AM)
+        isWin = false;
 
         // Create UI Rectangle (1x1)
+
 
         if (!uiRectangle) {
             uiRectangle = new our::Mesh({
@@ -192,6 +207,31 @@ class Playstate: public our::State {
             healthBgMaterial->pipelineState.blending.sourceFactor = GL_SRC_ALPHA;
             healthBgMaterial->pipelineState.blending.destinationFactor = GL_ONE_MINUS_SRC_ALPHA;
         }
+
+        if (!clockMaterial) {
+            clockMaterial = new our::TexturedMaterial();
+            clockMaterial->shader = our::AssetLoader<our::ShaderProgram>::get("textured");
+            clockMaterial->tint = glm::vec4(1.0f);
+            clockMaterial->pipelineState.depthTesting.enabled = false;
+            clockMaterial->pipelineState.blending.enabled = true;
+            clockMaterial->pipelineState.blending.sourceFactor = GL_SRC_ALPHA;
+            clockMaterial->pipelineState.blending.destinationFactor = GL_ONE_MINUS_SRC_ALPHA;
+            clockMaterial->sampler = our::AssetLoader<our::Sampler>::get("default");
+            clockMaterial->alphaThreshold = 0.1f; // Ensure transparency works
+        }
+        
+        // Read configuration
+        if(config.contains("nightDuration")) {
+            nightDuration = config["nightDuration"].get<float>();
+        } else {
+            nightDuration = 300.0f; // Default 5 mins
+        }
+        std::cout << "Playstate::onInitialize - Night Duration set to: " << nightDuration << " seconds" << std::endl;
+        std::cout << "Playstate::onInitialize - Hour Duration: " << (nightDuration / 6.0f) << " seconds" << std::endl;
+        
+        // Show 12 AM immediately on start
+        clockFlashTimer = 1.5f;
+        lastHour = 12;
     }
 
     void onDraw(double deltaTime) override {
@@ -277,10 +317,11 @@ class Playstate: public our::State {
         physicsSystem.update((float)deltaTime);
         
         // Sync physics results BACK to entities
+        // Sync physics results BACK to entities
         for(auto entity : world.getEntities()){
             auto* collider = entity->getComponent<our::BulletColliderComponent>();
             if(collider && collider->mass > 0.0f) {
-                collider->syncToEntity(); // Update entity from physics
+                collider->syncToEntity();
             }
         }
         
@@ -347,6 +388,36 @@ class Playstate: public our::State {
                  getApp()->changeState("menu");
                  // return; // Removed to allow rendering this frame before switch
              }
+        }
+        
+        // Win Logic (FNAF Style: Survive until 6 AM)
+        if(!isDead && playerHealth > 0.0f) {
+            // Use cached duration
+            float gameHourDuration = nightDuration / 6.0f; 
+            
+            survivalTimer += (float)deltaTime; // Reusing variable as "Total Time Elapsed"
+            
+            int currentHour = (int)(survivalTimer / gameHourDuration);
+            if (currentHour == 0) currentHour = 12; // 0 index is 12 AM
+            
+            // Track hour changes
+            if(currentHour != lastHour && currentHour < 6) { // Don't trigger flash for 6am, handled by win logic
+                std::cout << "CLOCK CHIME: It is now " << currentHour << " AM" << std::endl;
+                lastHour = currentHour;
+                clockFlashTimer = 1.5f; // Smoother fade duration
+            }
+
+            // Win at 6 AM
+            if(survivalTimer >= (gameHourDuration * 6.0f)) {
+                 if(!isWin) {
+                     isWin = true;
+                     std::cout << "6:00 AM - THE NIGHT IS OVER. YOU WON!" << std::endl;
+                     gameOverTimer = 4.0f; // Celebration pause (Screen Display Time)
+                 }
+                 
+                 gameOverTimer -= (float)deltaTime;
+                 // State switch handled in Render loop
+            }
         }
 
         glm::vec3 playerPos = glm::vec3(0.0f);
@@ -454,6 +525,57 @@ class Playstate: public our::State {
                 healthBarMaterial->shader->set("transform", VP*M2);
                 uiRectangle->draw();
             }
+            
+            // 3. Draw Clock / Win Screen
+            
+            // Check for 6 AM Win Condition
+            if (isWin) {
+                // RENDER 6 AM SCREEN (Opaque)
+                clockMaterial->texture = our::AssetLoader<our::Texture2D>::get("time-6am");
+                if (clockMaterial->texture) {
+                    glm::mat4 MClock = glm::scale(glm::mat4(1.0f), glm::vec3((float)size.x, (float)size.y, 1.0f));
+                    clockMaterial->setup();
+                    clockMaterial->shader->set("tint", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)); // Opaque
+                    clockMaterial->shader->set("transform", VP*MClock);
+                    uiRectangle->draw();
+                }
+                
+                // Wait for the "Celebration" timer then exit
+                if (gameOverTimer <= 0.0f) {
+                     getApp()->changeState("menu");
+                }
+                
+            } else if (clockFlashTimer > 0.0f) {
+                // HOURLY CHIME (Transparent & Fading)
+                clockFlashTimer -= (float)deltaTime;
+                
+                // Calculate Smooth Fade (0.5 start -> 0.0 end)
+                float alpha = (clockFlashTimer / 1.5f) * 0.5f; // Duration 1.5s for smoothness
+                if(alpha < 0.0f) alpha = 0.0f;
+                
+                float gameHourDuration = nightDuration / 6.0f; 
+                int hourIndex = (int)(survivalTimer / gameHourDuration);
+                 // Don't show 6am here, handled by isWin
+                if (hourIndex >= 6) hourIndex = 5;
+                if (hourIndex == 0) hourIndex = 12; // Handle 0 as 12
+                
+                std::string textureName = "time-";
+                if(hourIndex == 12) textureName += "12am";
+                else textureName += std::to_string(hourIndex) + "am";
+                
+                clockMaterial->texture = our::AssetLoader<our::Texture2D>::get(textureName);
+                
+                if(clockMaterial->texture) {
+                    // Fullscreen Overlay
+                    glm::mat4 MClock = glm::scale(glm::mat4(1.0f), glm::vec3((float)size.x, (float)size.y, 1.0f));
+                                    
+                    clockMaterial->setup();
+                    // Apply fading alpha
+                    clockMaterial->shader->set("tint", glm::vec4(1.0f, 1.0f, 1.0f, alpha)); 
+                    clockMaterial->shader->set("transform", VP*MClock);
+                    uiRectangle->draw();
+                }
+            }
         }
 
         // Get a reference to the keyboard object
@@ -507,6 +629,12 @@ class Playstate: public our::State {
         if(healthBgMaterial) {
              delete healthBgMaterial;
              healthBgMaterial = nullptr;
+        }
+
+        if(clockMaterial) {
+             // Shader is managed by AssetLoader (if we got it from there), so don't delete it
+             delete clockMaterial;
+             clockMaterial = nullptr;
         }
         
         // Don't forget to destroy the renderer

@@ -51,6 +51,12 @@ namespace our
         
         std::vector<TexturedMaterial*> postprocessMaterials;
         
+        // Shadow mapping resources
+        GLuint shadowMapFBO = 0;
+        Texture2D* shadowMap = nullptr;
+        ShaderProgram* shadowMapShader = nullptr;
+        const int shadowMapSize = 2048;
+        
         // Debug drawing
         ShaderProgram* debugLineShader = nullptr;
         bool debugDrawSkeleton = true; // enable skeleton debug drawing by default

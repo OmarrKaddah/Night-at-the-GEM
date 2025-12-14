@@ -64,47 +64,25 @@ vec3 calc_light(Light light, vec3 normal, vec3 view_dir, vec3 albedo, vec3 spec_
         float dist = length(light.position - fs_in.world_pos);
         attenuation = 1.0 / (light.constant + light.linear * dist + light.quadratic * dist * dist);
 
-        // Spotlight falloff with elliptical shape (oval)
         if (light.type == SPOT) {
             vec3 light_forward = normalize(-light.direction);
             float theta = dot(light_dir, light_forward);
-
-            // Create elliptical falloff (wider horizontally for realistic flashlight)
-            // Get the right and up vectors relative to light direction
-            vec3 light_right = normalize(cross(light_forward, vec3(0.0, 1.0, 0.0)));
-            if (length(light_right) < 0.1) {
-                light_right = normalize(cross(light_forward, vec3(1.0, 0.0, 0.0)));
+            
+            // EXPLICIT FIXED: Kill any light projecting backwards
+            if (theta <= 0.0) {
+                 attenuation = 0.0;
+            } else {
+                float epsilon = light.inner_angle - light.outer_angle;
+                float intensity = clamp((theta - light.outer_angle) / epsilon, 0.0, 1.0);
+                attenuation *= intensity;
             }
-            vec3 light_up = normalize(cross(light_right, light_forward));
-
-            // Project light_dir onto the plane perpendicular to light_forward
-            vec3 to_surface = light_dir - light_forward * theta;
-            float horizontal_dist = abs(dot(to_surface, light_right));
-            float vertical_dist = abs(dot(to_surface, light_up));
-
-            // Create slightly oval shape: closer to circle but not perfect (1.3x wider horizontally)
-            // Use a simpler approach: slight horizontal stretch for realistic flashlight
-            float oval_radius = sqrt(horizontal_dist * horizontal_dist * 1.3 + vertical_dist * vertical_dist * 0.9);
-
-            // Calculate angle from center using the oval shape
-            float angle_from_center = atan(oval_radius / max(theta, 0.01));
-            float inner_angle_rad = acos(light.inner_angle);
-            float outer_angle_rad = acos(light.outer_angle);
-
-            // More realistic smooth falloff with exponential curve
-            float angle_factor = (angle_from_center - inner_angle_rad) / (outer_angle_rad - inner_angle_rad);
-            float intensity = 1.0 - smoothstep(0.0, 1.0, clamp(angle_factor, 0.0, 1.0));
-            // Use exponential falloff for more realistic light distribution
-            intensity = pow(intensity, 2.0); // More gradual, realistic falloff
-
-            attenuation *= intensity;
         }
     }
 
-    // Diffuse (Lambert) - two-sided to handle flipped normals
-    float diff = abs(dot(normal, light_dir));
+    // Diffuse (Lambert) - standard one-sided lighting
+    float diff = max(dot(normal, light_dir), 0.0);
     // Add slight rim lighting for more realistic appearance
-    float rim = pow(1.0 - abs(dot(normal, view_dir)), 2.0) * 0.1;
+    float rim = pow(1.0 - max(dot(normal, view_dir), 0.0), 2.0) * 0.1;
     vec3 diffuse = (diff + rim) * albedo;
 
     // Specular (Blinn-Phong) with more realistic distribution
@@ -192,25 +170,14 @@ void main() {
                 // return;
 
                 // Shadow bias to prevent shadow acne
-                float bias = 0.01;
+                float bias = 0.005;
 
                 // Check if current fragment is in shadow
-                // In OpenGL depth buffer: 0 = near plane (close to light), 1 = far plane (far from light)
-                // Objects closer to light have smaller depth values
-                // If currentDepth > closestDepth, we're farther from light than the closest object = in shadow
-                // closestDepth of 1.0 means empty space (no object blocking), so not in shadow
-
-                // The key: we're checking if THIS fragment (on the ground/wall) is behind something
-                // that was rendered to the shadow map (like a zombie)
-                // When a zombie is between the light and the ground, the ground's currentDepth will be
-                // greater than the zombie's closestDepth in the shadow map
-
-                // Try a simpler, more aggressive check
                 if (closestDepth < 0.999) {
                     // There's something in the shadow map at this location
                     if (currentDepth > closestDepth + bias) {
                         // We're behind that something = in shadow
-                        shadow = 0.0; // Completely black shadow
+                        shadow = 0.2; // Dark shadow but not completely black
                     } else {
                         shadow = 1.0; // Not in shadow
                     }

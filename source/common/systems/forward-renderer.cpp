@@ -117,6 +117,40 @@ namespace our {
         debugLineShader->attach("assets/shaders/tinted.vert", GL_VERTEX_SHADER);
         debugLineShader->attach("assets/shaders/tinted.frag", GL_FRAGMENT_SHADER);
         debugLineShader->link();
+
+        // Initialize shadow map for flashlight shadows
+        glGenFramebuffers(1, &shadowMapFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+
+        // Create shadow map depth texture
+        shadowMap = texture_utils::empty(GL_DEPTH_COMPONENT24, glm::ivec2(shadowMapSize, shadowMapSize));
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMap->getOpenGLName(), 0);
+
+        // Configure shadow map texture for shadow sampling
+        shadowMap->bind();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+        Texture2D::unbind();
+
+        // No color buffer needed for shadow map
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+
+        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+            std::cerr << "ERROR: Shadow map framebuffer is not complete" << std::endl;
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // Create shadow map shader (simple depth-only shader)
+        shadowMapShader = new ShaderProgram();
+        shadowMapShader->attach("assets/shaders/shadow-map.vert", GL_VERTEX_SHADER);
+        shadowMapShader->attach("assets/shaders/shadow-map.frag", GL_FRAGMENT_SHADER);
+        shadowMapShader->link();
     }
     
     TexturedMaterial* ForwardRenderer::getPostProcessMaterial(const std::string& name) {
@@ -223,6 +257,17 @@ namespace our {
             debugLineShader = nullptr;
         }
         
+        // Delete shadow map resources
+        if(shadowMapFBO != 0){
+            std::cout << "ForwardRenderer::destroy - Deleting Shadow Map Resources" << std::endl;
+            glDeleteFramebuffers(1, &shadowMapFBO);
+            delete shadowMap;
+            if(shadowMapShader){
+                delete shadowMapShader;
+            }
+            shadowMapFBO = 0;
+        }
+        
         std::cout << "ForwardRenderer::destroy - End" << std::endl;
     }
 
@@ -285,6 +330,59 @@ namespace our {
         glm::mat4 proj = camera->getProjectionMatrix(windowSize);
         glm::mat4 VP = proj * view;
 
+        // === 3.5) Render shadow map from flashlight perspective ===============
+        glm::mat4 lightSpaceMatrix = glm::mat4(1.0f);
+        int flashlightIndex = -1;
+        
+        if (!lights.empty() && shadowMapShader) {
+            // Find the flashlight (first spotlight, which should be the player's)
+            for (size_t i = 0; i < lights.size(); i++) {
+                if (lights[i]->lightType == LightType::SPOT) {
+                    flashlightIndex = (int)i;
+                    break;
+                }
+            }
+            
+            if (flashlightIndex >= 0) {
+                auto* flashlight = lights[flashlightIndex];
+                
+                // Calculate light space matrix (light's view * projection)
+                glm::vec3 lightPos = flashlight->getPosition();
+                glm::vec3 lightDir = flashlight->getDirection();
+                glm::vec3 lightTarget = lightPos + lightDir;
+                
+                glm::mat4 lightView = glm::lookAt(lightPos, lightTarget, glm::vec3(0, 1, 0));
+                float fov = glm::radians(flashlight->outer_angle * 2.0f); // Full cone angle
+                glm::mat4 lightProj = glm::perspective(fov, 1.0f, 0.1f, 50.0f);
+                lightSpaceMatrix = lightProj * lightView;
+                
+                // Render to shadow map
+                glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+                glViewport(0, 0, shadowMapSize, shadowMapSize);
+                glClear(GL_DEPTH_BUFFER_BIT);
+                
+                shadowMapShader->use();
+                
+                // Render all opaque objects to shadow map
+                for (const auto& cmd : opaqueCommands) {
+                    shadowMapShader->set("lightSpaceMatrix", lightSpaceMatrix);
+                    shadowMapShader->set("model", cmd.localToWorld);
+                    
+                    // Handle skinning for animated objects
+                    if (cmd.animator && !cmd.animator->boneTransforms.empty()) {
+                        shadowMapShader->set("useSkinning", true);
+                        shadowMapShader->set("boneTransforms", cmd.animator->boneTransforms.data(), (uint32_t)cmd.animator->boneTransforms.size());
+                    } else {
+                        shadowMapShader->set("useSkinning", false);
+                    }
+                    
+                    cmd.mesh->draw();
+                }
+                
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            }
+        }
+
         // === 4) Setup viewport & clear buffers ================================
         glViewport(0, 0, windowSize.x, windowSize.y);
         glClearColor(0, 0, 0, 1);
@@ -331,6 +429,7 @@ namespace our {
                         matToUse->shader->set("light_count", lightCount);
                         
                         for (int i = 0; i < lightCount; i++) {
+                            if (i >= (int)lights.size()) break; // Safety check
                             auto* light = lights[i];
                             std::string lightPrefix = "lights[" + std::to_string(i) + "]";
                             matToUse->shader->set(lightPrefix + ".type", (int)light->lightType);
@@ -356,6 +455,18 @@ namespace our {
                         
                         matToUse->shader->set("camera_pos", cameraPos);
                         matToUse->shader->set("ambient_light", glm::vec3(0.02f, 0.02f, 0.02f));
+                        
+                        // Send shadow map data
+                        if (shadowMap && flashlightIndex >= 0) {
+                            glActiveTexture(GL_TEXTURE5);
+                            shadowMap->bind();
+                            matToUse->shader->set("shadow_map", 5);
+                            matToUse->shader->set("light_space_matrix", lightSpaceMatrix);
+                            matToUse->shader->set("use_shadows", 1);
+                            matToUse->shader->set("flashlight_index", flashlightIndex);
+                        } else {
+                            matToUse->shader->set("use_shadows", 0);
+                        }
                     }
 
                     // OPTIMIZED SKINNING DATA
@@ -386,6 +497,7 @@ namespace our {
                     cmd.material->shader->set("light_count", lightCount);
                     
                     for (int i = 0; i < lightCount; i++) {
+                        if (i >= (int)lights.size()) break; // Safety check
                         auto* light = lights[i];
                         std::string lightPrefix = "lights[" + std::to_string(i) + "]";
                         cmd.material->shader->set(lightPrefix + ".type", (int)light->lightType);
@@ -411,6 +523,18 @@ namespace our {
                     
                     cmd.material->shader->set("camera_pos", cameraPos);
                     cmd.material->shader->set("ambient_light", glm::vec3(0.02f, 0.02f, 0.02f));
+                    
+                    // Send shadow map data
+                    if (shadowMap && flashlightIndex >= 0) {
+                        glActiveTexture(GL_TEXTURE5);
+                        shadowMap->bind();
+                        cmd.material->shader->set("shadow_map", 5);
+                        cmd.material->shader->set("light_space_matrix", lightSpaceMatrix);
+                        cmd.material->shader->set("use_shadows", 1);
+                        cmd.material->shader->set("flashlight_index", flashlightIndex);
+                    } else {
+                        cmd.material->shader->set("use_shadows", 0);
+                    }
                 }
 
                 if (cmd.animator && !cmd.animator->boneTransforms.empty()) {
