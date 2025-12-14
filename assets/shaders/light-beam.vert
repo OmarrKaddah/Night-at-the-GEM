@@ -1,9 +1,16 @@
+
+Original file line number	Original file line	Diff line number	Diff line change
+@@ -0,0 +1,26 @@
 #version 330 core
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 tex_coord;
 layout(location = 3) in vec4 color;
+
+uniform mat4 transform;
+uniform mat4 model;
+uniform mat4 model_IT;
 
 out Varyings {
     vec3 world_pos;
@@ -12,14 +19,10 @@ out Varyings {
     vec4 color;
 } vs_out;
 
-uniform mat4 transform;    // MVP matrix
-uniform mat4 model;        // Model matrix for world position
-uniform mat4 model_IT;     // Inverse transpose for normals
-
 void main() {
-    gl_Position = transform * vec4(position, 1.0);
     vs_out.world_pos = vec3(model * vec4(position, 1.0));
-    vs_out.world_normal = normalize(mat3(model_IT) * normal);
+    vs_out.world_normal = normalize(vec3(model_IT * vec4(normal, 0.0)));
     vs_out.tex_coord = tex_coord;
     vs_out.color = color;
+    gl_Position = transform * vec4(position, 1.0);
 }
