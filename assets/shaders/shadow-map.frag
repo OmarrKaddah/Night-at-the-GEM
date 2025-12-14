@@ -7,3 +7,4 @@ void main() {
     // Fragment shader can be empty for depth-only rendering
 }
 
+
