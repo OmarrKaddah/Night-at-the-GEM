@@ -110,7 +110,7 @@ namespace our {
     void PhysicsSystem::registerWorldColliders(World* world) {
         if (!world) return;
         
-        std::cout << "PhysicsSystem: Registering colliders from world..." << std::endl;
+        // std::cout << "PhysicsSystem: Registering colliders from world..." << std::endl;
         int colliderCount = 0;
         
         // Iterate through all entities and register colliders
@@ -120,7 +120,7 @@ namespace our {
             // Check if entity has a BulletColliderComponent
             auto* collider = entity->getComponent<BulletColliderComponent>();
             if (collider) {
-                std::cout << "  Found collider on entity: " << entity->name << std::endl;
+                // std::cout << "  Found collider on entity: " << entity->name << std::endl;
                 registerCollider(collider);
                 colliderCount++;
             }
@@ -129,7 +129,7 @@ namespace our {
             // Note: You'd need to implement a method to get all descendants
         }
         
-        std::cout << "PhysicsSystem: Registered " << colliderCount << " colliders" << std::endl;
+        // std::cout << "PhysicsSystem: Registered " << colliderCount << " colliders" << std::endl;
     }
 
     void PhysicsSystem::setGravity(const glm::vec3& gravityVec) {
@@ -142,12 +142,32 @@ namespace our {
     bool PhysicsSystem::raycast(const glm::vec3& start, const glm::vec3& end,
                                 glm::vec3& hitPoint, glm::vec3& hitNormal,
                                 BulletColliderComponent** hitCollider) {
+        return raycast(start, end, hitPoint, hitNormal, hitCollider, nullptr);
+    }
+
+    bool PhysicsSystem::raycast(const glm::vec3& start, const glm::vec3& end,
+                                glm::vec3& hitPoint, glm::vec3& hitNormal,
+                                BulletColliderComponent** hitCollider,
+                                const btCollisionObject* ignore) {
         if (!dynamicsWorld) return false;
         
         btVector3 btStart(start.x, start.y, start.z);
         btVector3 btEnd(end.x, end.y, end.z);
         
-        btCollisionWorld::ClosestRayResultCallback rayCallback(btStart, btEnd);
+        struct ClosestNotMeCallback : btCollisionWorld::ClosestRayResultCallback {
+            const btCollisionObject* ignore = nullptr;
+            ClosestNotMeCallback(const btVector3& from, const btVector3& to, const btCollisionObject* ignore)
+                : btCollisionWorld::ClosestRayResultCallback(from, to), ignore(ignore) {}
+
+            btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult, bool normalInWorldSpace) override {
+                if(ignore && rayResult.m_collisionObject == ignore) {
+                    return 1.0f;
+                }
+                return btCollisionWorld::ClosestRayResultCallback::addSingleResult(rayResult, normalInWorldSpace);
+            }
+        };
+
+        ClosestNotMeCallback rayCallback(btStart, btEnd, ignore);
         dynamicsWorld->rayTest(btStart, btEnd, rayCallback);
         
         if (rayCallback.hasHit()) {

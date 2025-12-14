@@ -57,6 +57,12 @@ namespace our {
         bool raycast(const glm::vec3& start, const glm::vec3& end, 
                     glm::vec3& hitPoint, glm::vec3& hitNormal,
                     BulletColliderComponent** hitCollider = nullptr);
+
+        // Raycast that ignores a specific collision object (useful to avoid hitting the player collider)
+        bool raycast(const glm::vec3& start, const glm::vec3& end,
+                    glm::vec3& hitPoint, glm::vec3& hitNormal,
+                    BulletColliderComponent** hitCollider,
+                    const btCollisionObject* ignore);
     };
 
 }

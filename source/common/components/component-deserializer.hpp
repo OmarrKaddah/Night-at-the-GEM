@@ -8,6 +8,7 @@
 #include "light.hpp"
 #include "bullet-collider.hpp"
 #include "animator.hpp"
+#include "health.hpp"
 
 namespace our {
 
@@ -29,8 +30,10 @@ namespace our {
             component = entity->addComponent<LightComponent>();
 		} else if (type == BulletColliderComponent::getID()) {
             component = entity->addComponent<BulletColliderComponent>();
-		} else if (type == AnimatorComponent::getID()) {
+        } else if (type == AnimatorComponent::getID()) {
             component = entity->addComponent<AnimatorComponent>();
+        } else if (type == HealthComponent::getID()) {
+            component = entity->addComponent<HealthComponent>();
         }
         if(component) component->deserialize(data);
     }

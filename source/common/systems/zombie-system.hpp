@@ -3,6 +3,7 @@
 #include "../ecs/world.hpp"
 #include "../components/animator.hpp"
 #include "../components/bullet-collider.hpp"
+#include "../components/health.hpp"
 #include "../navigation/nav-grid-2d.hpp"
 #include "../navigation/pathfinder-2d.hpp"
 #include <glm/glm.hpp>
@@ -25,16 +26,36 @@ namespace our
         NavGrid2D* floor2Grid = nullptr;
         Pathfinder2D pathfinder;
         
-        struct ZombieState {
+
+
+        float respawnDelaySeconds = 10.0f;
+
+    public:
+            struct ZombieState {
             std::vector<glm::vec3> path;
             size_t pathIndex = 0;
             float pathTimer = 0.0f;
             glm::vec3 lastPosition = glm::vec3(0);
             float stuckTimer = 0.0f;
+            bool dead = false;
+            float respawnTimer = 0.0f;
+
+            bool spawnSaved = false;
+            glm::vec3 spawnPosition = glm::vec3(0);
+            glm::vec3 spawnRotation = glm::vec3(0);
+            glm::vec3 spawnScale = glm::vec3(1);
+
+            float soundTimer = 0.0f;      // Timer for ambient growls
+            float attackSoundCooldown = 0.0f; // Cooldown for attack sounds
         };
-        std::unordered_map<Entity*, ZombieState> states;
         
-    public:
+        std::unordered_map<Entity*, ZombieState> states;
+
+        void setRespawnDelaySeconds(float seconds) {
+            respawnDelaySeconds = (seconds < 0.5f) ? 0.5f : seconds;
+        }
+        [[nodiscard]] float getRespawnDelaySeconds() const { return respawnDelaySeconds; }
+
         struct StairWaypoint {
             glm::vec3 position;
             int targetFloor;
@@ -47,6 +68,61 @@ namespace our
             floor1Grid = f1Grid;
             floor2Grid = f2Grid;
             stairWaypoints = stairs;
+        }
+
+        // Reset all zombies to spawn state (Regenerate)
+        void resetAll(World* world) {
+             for(auto entity : world->getEntities()){
+                if(entity->name.find("Zombie") != 0) continue;
+                
+                auto& state = states[entity];
+                
+                // Reset State vars
+                state.dead = false;
+                state.respawnTimer = 0.0f;
+                state.path.clear();
+                state.pathIndex = 0;
+                state.pathTimer = 0.0f;
+                state.stuckTimer = 0.0f;
+
+                // Reset Transform
+                if (state.spawnSaved) {
+                    entity->localTransform.position = state.spawnPosition;
+                    entity->localTransform.rotation = state.spawnRotation;
+                    entity->localTransform.scale = state.spawnScale;
+                }
+
+                // Reset Health
+                if(auto* health = entity->getComponent<HealthComponent>()) {
+                    health->currentHealth = health->maxHealth;
+                }
+
+                // Reset Physics
+                if(auto* collider = entity->getComponent<BulletColliderComponent>()) {
+                    if(collider->rigidBody) {
+                        collider->rigidBody->setLinearVelocity(btVector3(0,0,0));
+                        collider->rigidBody->setAngularVelocity(btVector3(0,0,0));
+                        collider->rigidBody->clearForces();
+                        collider->rigidBody->activate(true);
+                        
+                        // Sync Transform to Physics immediately
+                        btTransform trans = collider->rigidBody->getWorldTransform();
+                        trans.setOrigin(btVector3(state.spawnPosition.x, state.spawnPosition.y, state.spawnPosition.z));
+                        // Convert Euler to Quat for rotation reset if needed, or just identity if spawn was upright
+                        // For now assuming specific rotation requires quat conversion
+                         glm::quat q(state.spawnRotation);
+                         trans.setRotation(btQuaternion(q.x, q.y, q.z, q.w));
+                        
+                        collider->rigidBody->setWorldTransform(trans);
+                    }
+                }
+                
+                // Reset Animation
+                if(auto* animator = entity->getComponent<AnimatorComponent>()) {
+                    animator->playAnimation("walk", true);
+                }
+             }
+             std::cout << "ZombieSystem: All zombies reset (Regenerated)." << std::endl;
         }
 
         // Cleanup zombie states so we don't hold invalid entity pointers
@@ -89,6 +165,75 @@ namespace our
                 if(entity->name.find("Zombie") != 0) continue;
                 
                 auto& state = states[entity];
+
+                if(!state.spawnSaved) {
+                    state.spawnSaved = true;
+                    state.spawnPosition = entity->localTransform.position;
+                    state.spawnRotation = entity->localTransform.rotation;
+                    state.spawnScale = entity->localTransform.scale;
+                }
+
+                // If zombie has 0 health, play death animation once and stop movement.
+                if(auto* health = entity->getComponent<HealthComponent>()) {
+                    if(health->isDead()) {
+                        if(!state.dead) {
+                            state.dead = true;
+                            state.path.clear();
+                            state.pathIndex = 0;
+                            state.pathTimer = 0.0f;
+                            state.stuckTimer = 0.0f;
+
+                            if(auto* animator = entity->getComponent<AnimatorComponent>()) {
+                                animator->playAnimation("death", false);
+                            }
+
+                            if(auto* collider = entity->getComponent<BulletColliderComponent>()) {
+                                if(collider->rigidBody) {
+                                    collider->rigidBody->setLinearVelocity(btVector3(0, 0, 0));
+                                    collider->rigidBody->setAngularVelocity(btVector3(0, 0, 0));
+                                    collider->rigidBody->setLinearFactor(btVector3(0, 0, 0));
+                                    collider->rigidBody->setAngularFactor(btVector3(0, 0, 0));
+                                }
+                            }
+
+                            // std::cout << entity->name << " died." << std::endl;
+                            state.respawnTimer = respawnDelaySeconds;
+                        } else {
+                            state.respawnTimer -= deltaTime;
+                        }
+
+                        if(state.respawnTimer > 0.0f) continue;
+
+                        // Respawn
+                        state.dead = false;
+                        state.respawnTimer = 0.0f;
+                        state.path.clear();
+                        state.pathIndex = 0;
+                        state.pathTimer = 0.0f;
+                        state.stuckTimer = 0.0f;
+
+                        health->currentHealth = health->maxHealth;
+                        entity->localTransform.position = state.spawnPosition;
+                        entity->localTransform.rotation = state.spawnRotation;
+                        entity->localTransform.scale = state.spawnScale;
+
+                        if(auto* collider = entity->getComponent<BulletColliderComponent>()) {
+                            if(collider->rigidBody) {
+                                collider->rigidBody->setLinearFactor(btVector3(1, 1, 1));
+                                collider->rigidBody->setAngularFactor(btVector3(0, 1, 0));
+                                collider->rigidBody->activate(true);
+                            }
+                            collider->syncFromEntity();
+                        }
+
+                        if(auto* animator = entity->getComponent<AnimatorComponent>()) {
+                            animator->playAnimation("walk", true);
+                        }
+
+                        // std::cout << entity->name << " respawned." << std::endl;
+                    }
+                }
+
                 state.pathTimer -= deltaTime;
                 
                 glm::vec3 zombiePos = entity->localTransform.position;
@@ -102,8 +247,8 @@ namespace our
                     int playerFloor = getFloor(playerPos.y);
                     
                     // DEBUG OUTPUT
-                    std::cout << entity->name << " Floor=" << zombieFloor << " Y=" << zombiePos.y 
-                              << " | Player Floor=" << playerFloor << " Y=" << playerPos.y << std::endl;
+                    // std::cout << entity->name << " Floor=" << zombieFloor << " Y=" << zombiePos.y 
+                    //           << " | Player Floor=" << playerFloor << " Y=" << playerPos.y << std::endl;
                     
                     // Only recalculate if: same floor OR path is empty OR reached end of path
                     // Don't recalculate while actively climbing between floors
@@ -111,7 +256,7 @@ namespace our
                     bool shouldRecalculate = true;  // Always recalculate to get proper stair waypoints
                     
                     if (!shouldRecalculate) {
-                        std::cout << "  -> Keeping current path (climbing stairs, index=" << state.pathIndex << ")" << std::endl;
+                        // std::cout << "  -> Keeping current path (climbing stairs, index=" << state.pathIndex << ")" << std::endl;
                         continue;  // Skip recalculation, keep following current path
                     }
                     
@@ -126,7 +271,7 @@ namespace our
                         NavGrid2D* grid = getGridForFloor(zombieFloor);
                         if (grid) {
                             state.path = pathfinder.findPath(zombiePos, playerPos, grid);
-                            std::cout << "  -> Same floor, direct path. Waypoints: " << state.path.size() << std::endl;
+                            // std::cout << "  -> Same floor, direct path. Waypoints: " << state.path.size() << std::endl;
                         }
                     } else {
                         // Different floors OR someone in stair zone: Use zone-based navigation
@@ -144,23 +289,23 @@ namespace our
                             
                             if ((distToMidLanding > 1.0f || !atMidLandingHeight) && !passedMidLanding) {
                                 state.path.push_back(midLandingPos);
-                                std::cout << "  -> F0->F1: Climbing to mid-landing" << std::endl;
+                                // std::cout << "  -> F0->F1: Climbing to mid-landing" << std::endl;
                             } else {
                                 if (playerPos.x < 0) {
                                     state.path.push_back(glm::vec3(-2.0, 0.73, 25.2));
                                     state.path.push_back(glm::vec3(-2.8, 1.2, 25.6));
                                     state.path.push_back(glm::vec3(-3.5, 1.8, 25.6));
-                                    std::cout << "  -> F0->F1: Left stair path" << std::endl;
+                                    // std::cout << "  -> F0->F1: Left stair path" << std::endl;
                                 } else {
                                     state.path.push_back(glm::vec3(2.0, 0.73, 25.2));
                                     state.path.push_back(glm::vec3(2.8, 1.2, 25.6));
                                     state.path.push_back(glm::vec3(3.5, 1.8, 25.6));
-                                    std::cout << "  -> F0->F1: Right stair path" << std::endl;
+                                    // std::cout << "  -> F0->F1: Right stair path" << std::endl;
                                 }
                             }
                         }
                         
-                        std::cout << "  -> Zone-based path. Waypoints: " << state.path.size() << std::endl;
+                        // std::cout << "  -> Zone-based path. Waypoints: " << state.path.size() << std::endl;
                     }
                     
                     state.pathIndex = 0;
@@ -179,8 +324,8 @@ namespace our
                     // DEBUG: Show current waypoint progress
                     float zombieVisualY = zombiePos.y + 0.6f;  // Account for model offset
                     float yDiff = std::abs(target.y - zombieVisualY);
-                    std::cout << entity->name << " -> Waypoint " << state.pathIndex << "/" << state.path.size() 
-                              << " Dist: " << flatDist << "m, Y-diff: " << yDiff << "m" << std::endl;
+                    // std::cout << entity->name << " -> Waypoint " << state.pathIndex << "/" << state.path.size() 
+                    //           << " Dist: " << flatDist << "m, Y-diff: " << yDiff << "m" << std::endl;
                     
                     // For stair waypoints, check BOTH horizontal and vertical distance
                     // NOTE: Zombie models have ~0.6m offset (skeleton root at feet, visual mesh above)
@@ -190,14 +335,14 @@ namespace our
                     
                     if (reachedHorizontally && reachedVertically) {
                         // Reached waypoint in 3D space, move to next
-                        std::cout << entity->name << " REACHED waypoint " << state.pathIndex << "!" << std::endl;
+                        // std::cout << entity->name << " REACHED waypoint " << state.pathIndex << "!" << std::endl;
                         state.pathIndex++;
                     } else {
                         // Move toward waypoint in 3D
                         // Safety check: prevent NaN from normalizing zero vectors
                         if (glm::length(diff) < 0.05f || glm::length(flatDiff) < 0.05f) {
                             // Very close to waypoint, mark as reached to avoid getting stuck
-                            std::cout << entity->name << " -> Too close to waypoint, marking as reached" << std::endl;
+                            // std::cout << entity->name << " -> Too close to waypoint, marking as reached" << std::endl;
                             state.pathIndex++;
                             continue;
                         }
@@ -215,11 +360,11 @@ namespace our
                         float distMoved = glm::distance(zombiePos, state.lastPosition);
                         if (distMoved < 0.1f) {
                             state.stuckTimer += deltaTime;
-                            std::cout << entity->name << " stuck timer: " << state.stuckTimer 
-                                     << "s (moved " << distMoved << "m)" << std::endl;
+                            // std::cout << entity->name << " stuck timer: " << state.stuckTimer 
+                            //          << "s (moved " << distMoved << "m)" << std::endl;
                         } else {
                             if (state.stuckTimer > 0.5f) {  // Only log if was stuck for a bit
-                                std::cout << entity->name << " UNSTUCK (moved " << distMoved << "m)" << std::endl;
+                                // std::cout << entity->name << " UNSTUCK (moved " << distMoved << "m)" << std::endl;
                             }
                             state.stuckTimer = 0.0f;
                             state.lastPosition = zombiePos;
@@ -236,9 +381,9 @@ namespace our
                                 // If stuck for >1 second, apply upward thrust
                                 if (state.stuckTimer > 1.0f) {
                                     finalYVelocity = 0.5f;  // Upward thrust to unstuck
-                                    std::cout << "!!! " << entity->name << " APPLYING THRUST at (" 
-                                             << zombiePos.x << ", " << zombiePos.y << ", " << zombiePos.z 
-                                             << ") !!!" << std::endl;
+                                    // std::cout << "!!! " << entity->name << " APPLYING THRUST at (" 
+                                    //          << zombiePos.x << ", " << zombiePos.y << ", " << zombiePos.z 
+                                    //          << ") !!!" << std::endl;
                                 }
                                 
                                 collider->rigidBody->setLinearVelocity(btVector3(
@@ -258,8 +403,15 @@ namespace our
                 }
                 
                 // Animation
-                if(auto animator = entity->getComponent<AnimatorComponent>()) {
-                    animator->currentAnimation = "walk";
+                if(auto* animator = entity->getComponent<AnimatorComponent>()) {
+                    // If a non-looping animation is currently playing (e.g., hit), don't overwrite it.
+                    if(animator->isPlaying && !animator->loop) {
+                        continue;
+                    }
+                    // Otherwise, keep the zombie in the walk loop.
+                    if(animator->currentAnimation != "walk" || !animator->isPlaying || !animator->loop) {
+                        animator->playAnimation("walk", true);
+                    }
                 }
             }
         }

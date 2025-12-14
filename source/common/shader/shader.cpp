@@ -10,7 +10,7 @@ std::string checkForShaderCompilationErrors(GLuint shader);
 std::string checkForLinkingErrors(GLuint program);
 
 bool our::ShaderProgram::attach(const std::string& filename, GLenum type) const {
-    std::cout << "Attaching shader: " << filename << " type=" << type << std::endl;
+    // std::cout << "Attaching shader: " << filename << " type=" << type << std::endl;
 
     std::ifstream file(filename);
     if (!file) {
@@ -48,13 +48,13 @@ bool our::ShaderProgram::link() const {
     // linking error and print it so that you can know what is wrong with the
     // program. The returned string will be empty if there is no errors.
     glLinkProgram(program);
-    std::cout << "Linking program " << program << std::endl;
+    // std::cout << "Linking program " << program << std::endl;
     std::string error = checkForLinkingErrors(program);
     if (!error.empty()) {
         std::cerr << "ERROR: Shader linking failed:\n" << error << std::endl;
         return false;
     }
-    std::cout << "Shader linked successfully! Program ID: " << program << std::endl;
+    // std::cout << "Shader linked successfully! Program ID: " << program << std::endl;
     return true;
     
 }

@@ -16,7 +16,7 @@
       "projectTarget": "GAME_APPLICATION.exe",
       "name": "Run Shader Test",
       "args": [ "-c=config/shader-test/test-5.jsonc" ],
-      "currentDir": "."
+      "currentDir": "${workspaceRoot}"
     },
     {
       "type": "default",
@@ -24,7 +24,7 @@
       "projectTarget": "GAME_APPLICATION.exe (C:\\university\\Fall 2025\\Computer Graphics\\Project\\CMPS346 Project - Student Version\\bin\\GAME_APPLICATION.exe)",
       "name": "Run Mesh Test (default-0)",
       "args": [ "-c=config/mesh-test/default-1.jsonc" ],
-      "currentDir": "."
+      "currentDir": "${workspaceRoot}"
     },
     {
       "type": "default",
@@ -32,7 +32,7 @@
       "projectTarget": "GAME_APPLICATION.exe (C:\\university\\Fall 2025\\Computer Graphics\\Project\\CMPS346 Project - Student Version\\bin\\GAME_APPLICATION.exe)",
       "name": "Run Transform Test",
       "args": [ "-c=config/transform-test/test-0.jsonc" ],
-      "currentDir": "."
+      "currentDir": "${workspaceRoot}"
     },
     {
       "type": "default",
@@ -40,7 +40,7 @@
       "projectTarget": "GAME_APPLICATION.exe (C:\\university\\Fall 2025\\Computer Graphics\\Project\\CMPS346 Project - Student Version\\bin\\GAME_APPLICATION.exe)",
       "name": "Run Pipeline Test",
       "args": [ "-c=config/pipeline-test/fc-3.jsonc" ],
-      "currentDir": "."
+      "currentDir": "${workspaceRoot}"
     }
   ]
 }

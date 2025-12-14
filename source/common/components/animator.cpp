@@ -16,7 +16,7 @@ namespace our {
         if (!skeletonName.empty()) {
             skeleton = getSkeleton(skeletonName);
             if (skeleton) {
-                std::cout << "Loaded skeleton '" << skeletonName << "' with " << skeleton->bones.size() << " bones" << std::endl;
+                // std::cout << "Loaded skeleton '" << skeletonName << "' with " << skeleton->bones.size() << " bones" << std::endl;
             } else {
                 std::cerr << "Failed to find skeleton: " << skeletonName << std::endl;
                 return;
@@ -30,7 +30,7 @@ namespace our {
                 try {
                     auto clip = AnimationLoader::loadAnimation(animFile, skeleton);
                     animations[name] = clip;
-                    std::cout << "Loaded animation '" << name << "' from " << animFile << std::endl;
+                    // std::cout << "Loaded animation '" << name << "' from " << animFile << std::endl;
                 } catch (const std::exception& e) {
                     std::cerr << "Failed to load animation '" << name << "': " << e.what() << std::endl;
                 }
@@ -47,9 +47,9 @@ namespace our {
             boneTransforms.resize(skeleton->bones.size(), glm::mat4(1.0f));
             jointTransforms.resize(skeleton->bones.size(), glm::mat4(1.0f));
             // Log bone list for debugging mapping between mesh and skeleton
-            std::cout << "Skeleton bones (count=" << skeleton->bones.size() << "):\n";
+            // std::cout << "Skeleton bones (count=" << skeleton->bones.size() << "):\n";
             for (size_t i = 0; i < skeleton->bones.size(); ++i) {
-                std::cout << "  [" << i << "] " << skeleton->bones[i].name << std::endl;
+                // std::cout << "  [" << i << "] " << skeleton->bones[i].name << std::endl;
             }
         }
     }
@@ -134,49 +134,29 @@ namespace our {
         // Debug: print once when animation starts
         static bool printedOnce = false;
         if (!printedOnce) {
-            std::cout << "Animator updating: animation='" << currentAnimation 
-                      << "', time=" << currentTime 
-                      << ", boneTransforms.size()=" << boneTransforms.size() 
-                      << ", clip->boneAnimations.size()=" << clip->boneAnimations.size() << std::endl;
+            // std::cout << "Animator updating: animation='" << currentAnimation 
+            //          << "', time=" << currentTime 
+            //          << ", boneTransforms.size()=" << boneTransforms.size() 
+            //          << ", clip->boneAnimations.size()=" << clip->boneAnimations.size() << std::endl;
             
             // Print which bones have animation data
-            std::cout << "Bones with animation data: ";
+            // std::cout << "Bones with animation data: ";
             for (auto& [boneId, anim] : clip->boneAnimations) {
                 if (boneId < (int)skeleton->bones.size()) {
-                    std::cout << skeleton->bones[boneId].name << "(" << boneId << ") ";
+                    // std::cout << skeleton->bones[boneId].name << "(" << boneId << ") ";
                 }
             }
-            std::cout << std::endl;
+            // std::cout << std::endl;
             
             // Print first bone transform
             if (!boneTransforms.empty()) {
                 auto& m = boneTransforms[0];
-                std::cout << "BoneTransform[0]: [" << m[0][0] << "," << m[1][1] << "," << m[2][2] << "," << m[3][3] << "]" << std::endl;
+                // std::cout << "BoneTransform[0]: [" << m[0][0] << "," << m[1][1] << "," << m[2][2] << "," << m[3][3] << "]" << std::endl;
             }
             printedOnce = true;
         }
 
-        // Periodic debug: every 60 frames print a few joint world positions (hips, spine, head) if present
-        static int frameCounter = 0;
-        frameCounter++;
-        if (frameCounter % 60 == 0) {
-            if (skeleton) {
-                auto printIfExists = [&](const std::string& name){
-                    auto it = skeleton->boneMap.find(name);
-                    if (it != skeleton->boneMap.end()) {
-                        int id = it->second;
-                        if (id >= 0 && id < (int)jointTransforms.size()) {
-                            glm::vec4 p = jointTransforms[id] * glm::vec4(0,0,0,1);
-                            std::cout << "Joint " << name << " (" << id << ") pos: (" << p.x << "," << p.y << "," << p.z << ")" << std::endl;
-                        }
-                    }
-                };
 
-                printIfExists("Zombie_Hips");
-                printIfExists("Zombie_Spine");
-                printIfExists("Zombie_Head");
-            }
-        }
     }
 
     void AnimatorComponent::playAnimation(const std::string& name, bool looping) {

@@ -141,7 +141,7 @@ namespace our {
     }
 
     std::shared_ptr<Skeleton> AnimationLoader::loadSkeleton(const std::string& filename) {
-        std::cout << "AnimationLoader: Attempting to load skeleton from " << filename << std::endl;
+        // std::cout << "AnimationLoader: Attempting to load skeleton from " << filename << std::endl;
         
         Assimp::Importer importer;
         
@@ -157,7 +157,7 @@ namespace our {
             throw std::runtime_error("Failed to load animation file: " + std::string(importer.GetErrorString()));
         }
 
-        std::cout << "Scene loaded, processing " << scene->mNumMeshes << " meshes" << std::endl;
+        // std::cout << "Scene loaded, processing " << scene->mNumMeshes << " meshes" << std::endl;
 
         auto skeleton = std::make_shared<Skeleton>();
         skeleton->globalInverseTransform = glm::inverse(aiMatrix4x4ToGlm(scene->mRootNode->mTransformation));
@@ -166,11 +166,11 @@ namespace our {
         std::map<std::string, int> boneMapping;
         std::map<std::string, glm::mat4> offsetMatrices;
 
-        std::cout << "Collecting bones from meshes..." << std::endl;
+        // std::cout << "Collecting bones from meshes..." << std::endl;
 
         for (unsigned int m = 0; m < scene->mNumMeshes; ++m) {
             aiMesh* mesh = scene->mMeshes[m];
-            std::cout << "  Mesh " << m << " has " << mesh->mNumBones << " bones" << std::endl;
+            // std::cout << "  Mesh " << m << " has " << mesh->mNumBones << " bones" << std::endl;
             
             for (unsigned int b = 0; b < mesh->mNumBones; ++b) {
                 aiBone* bone = mesh->mBones[b];
@@ -193,25 +193,25 @@ namespace our {
         }
 
         // Initialize parent indices
-        std::cout << "Initializing parent indices for " << skeleton->bones.size() << " bones" << std::endl;
+        // std::cout << "Initializing parent indices for " << skeleton->bones.size() << " bones" << std::endl;
         skeleton->parentIndices.resize(skeleton->bones.size(), -1);
 
         // Build bone hierarchy
-        std::cout << "Building bone hierarchy..." << std::endl;
+        // std::cout << "Building bone hierarchy..." << std::endl;
         try {
             buildBoneHierarchy(scene->mRootNode, skeleton.get(), -1, boneMapping);
-            std::cout << "Bone hierarchy built successfully" << std::endl;
+            // std::cout << "Bone hierarchy built successfully" << std::endl;
         } catch (const std::exception& e) {
             std::cerr << "Error building bone hierarchy: " << e.what() << std::endl;
             throw;
         }
 
-        std::cout << "Loaded skeleton with " << skeleton->bones.size() << " bones from " << filename << std::endl;
+        // std::cout << "Loaded skeleton with " << skeleton->bones.size() << " bones from " << filename << std::endl;
 
         // Dump skeleton bone names for debugging name-matching issues
-        std::cout << "Skeleton bone list (index: name):" << std::endl;
+        // std::cout << "Skeleton bone list (index: name):" << std::endl;
         for (size_t bi = 0; bi < skeleton->bones.size(); ++bi) {
-            std::cout << "  [" << bi << "] " << skeleton->bones[bi].name << std::endl;
+            // std::cout << "  [" << bi << "] " << skeleton->bones[bi].name << std::endl;
         }
 
         // Recompute offset matrices from the bind-pose hierarchy to ensure they
@@ -347,8 +347,8 @@ namespace our {
                 animClip->boneAnimations[boneId] = boneAnim;
             }
 
-            std::cout << "Loaded animation: " << animClip->name << " (duration: " << animClip->duration 
-                      << ", fps: " << animClip->ticksPerSecond << ")" << std::endl;
+            // std::cout << "Loaded animation: " << animClip->name << " (duration: " << animClip->duration 
+            //           << ", fps: " << animClip->ticksPerSecond << ")" << std::endl;
 
             // Store animation in a map (you'll need to add this to Skeleton or handle externally)
             // For now, we'll just print the info
@@ -378,28 +378,14 @@ namespace our {
             throw std::runtime_error("No animations found in file: " + filename);
         }
 
-        // Debug dump: list all animations and their channel node names to help
-        // diagnose name mismatches between animation channels and skeleton bones.
-        std::cout << "Animation file contains " << scene->mNumAnimations << " animations" << std::endl;
+        // Debug dump: list all animations to help diagnose issues.
+        // std::cout << "Animation file contains " << scene->mNumAnimations << " animations" << std::endl;
         for (unsigned int a = 0; a < scene->mNumAnimations; ++a) {
             aiAnimation* anim = scene->mAnimations[a];
             if (!anim) continue;
-            const char* animName = anim->mName.C_Str();
-            std::cout << "  Animation[" << a << "] name='" << (animName ? animName : "(unnamed)")
-                      << "' channels=" << anim->mNumChannels << std::endl;
-
-            // Limit per-animation channel dump to avoid excessive spam
-            unsigned int dumpLimit = anim->mNumChannels;
-            const unsigned int MAX_DUMP = 500;
-            if (dumpLimit > MAX_DUMP) dumpLimit = MAX_DUMP;
-            for (unsigned int c = 0; c < dumpLimit; ++c) {
-                aiNodeAnim* channel = anim->mChannels[c];
-                if (!channel) continue;
-                std::cout << "    Channel[" << c << "] nodeName='" << channel->mNodeName.C_Str() << "'" << std::endl;
-            }
-            if (anim->mNumChannels > dumpLimit) {
-                std::cout << "    ... (" << (anim->mNumChannels - dumpLimit) << " more channels omitted)" << std::endl;
-            }
+            // const char* animName = anim->mName.C_Str();
+            // std::cout << "  Animation[" << a << "] name='" << (animName ? animName : "(unnamed)")
+            //          << "' channels=" << anim->mNumChannels << std::endl;
         }
 
         // Aggregate all animations/channels in the file into a single AnimationClip
@@ -464,7 +450,7 @@ namespace our {
                         // matchedName and boneId set by helper
                     } else {
                         if (matchedBones < 10) {
-                            std::cout << "  Channel '" << originalName << "' -> '" << lookupName << "' NOT FOUND in skeleton" << std::endl;
+                            // std::cout << "  Channel '" << originalName << "' -> '" << lookupName << "' NOT FOUND in skeleton" << std::endl;
                         }
                         continue; // skip if not a bone in our skeleton
                     }
@@ -586,9 +572,9 @@ namespace our {
         animClip->duration = maxDuration;
         animClip->ticksPerSecond = (chosenTicksPerSecond != 0.0f) ? chosenTicksPerSecond : 25.0f;
 
-        std::cout << "Loaded animation: " << animClip->name << " from " << filename 
-                  << " (duration: " << animClip->duration << ", fps: " << animClip->ticksPerSecond 
-                  << ", matched " << matchedBones << "/" << totalChannels << " channels)" << std::endl;
+        // std::cout << "Loaded animation: " << animClip->name << " from " << filename 
+        //           << " (duration: " << animClip->duration << ", fps: " << animClip->ticksPerSecond 
+        //           << ", matched " << matchedBones << "/" << totalChannels << " channels)" << std::endl;
 
         return animClip;
     }

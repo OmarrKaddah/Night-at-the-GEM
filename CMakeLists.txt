@@ -5,6 +5,12 @@ project(GFX-LAB VERSION 0.1.0)          # Here we select the project name and ve
 if(UNIX AND NOT APPLE)
         find_package(OpenGL REQUIRED)
         find_package(GLEW REQUIRED)
+        find_package(PkgConfig REQUIRED)
+endif()
+
+
+if (MSVC)
+    add_compile_definitions(_ITERATOR_DEBUG_LEVEL=0)
 endif()
 
 # Here we select C++17 with all the standards required and all compiler-specific extensions disabled
@@ -112,7 +118,12 @@ set(COMMON_SOURCES
         source/common/components/bullet-collider.cpp
         source/common/components/light.hpp
         source/common/components/light.cpp
+        source/common/components/health.hpp
+        source/common/components/health.cpp
         source/common/components/component-deserializer.hpp
+
+        source/common/sound/sound-manager.hpp
+        source/common/sound/sound-manager.cpp
 
         source/common/systems/forward-renderer.hpp
         source/common/systems/forward-renderer.cpp
@@ -121,6 +132,10 @@ set(COMMON_SOURCES
         source/common/systems/animation-system.cpp
         source/common/systems/physics-system.hpp
         source/common/systems/physics-system.cpp
+        source/common/systems/weapon-system.hpp
+        source/common/systems/weapon-system.cpp
+        source/common/systems/sound-system.hpp
+        source/common/systems/sound-system.cpp
         source/common/systems/free-camera-controller.hpp
         source/common/systems/movement.hpp
         source/common/systems/animation-system.cpp
@@ -163,6 +178,8 @@ set(STATES_SOURCES
 add_executable(GAME_APPLICATION source/main.cpp ${STATES_SOURCES} ${COMMON_SOURCES} ${VENDOR_SOURCES})
 target_link_libraries(GAME_APPLICATION glfw assimp)
 target_include_directories(GAME_APPLICATION PUBLIC vendor/assimp-6.0.2/include)
+
+
 
 if(UNIX AND NOT APPLE)
         target_link_libraries(GAME_APPLICATION OpenGL::GL)

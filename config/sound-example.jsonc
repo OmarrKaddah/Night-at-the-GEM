@@ -1,0 +1,104 @@
+{
+    // Example sound configuration for entities
+    // Add this to your entity's components array
+    
+    "example_player_entity": {
+        "name": "PlayerCamera",
+        "components": [
+            {
+                "type": "Sound Source",
+                "volumeMultiplier": 1.0,
+                "muted": false,
+                "use3DAudio": false,
+                "clips": [
+                    {
+                        "name": "footstep_default",
+                        "file": "assets/sounds/footsteps/default.wav",
+                        "volume": 0.7,
+                        "pitch": 1.0,
+                        "loop": false,
+                        "is3D": false
+                    },
+                    {
+                        "name": "gunshot",
+                        "file": "assets/sounds/weapons/gunshot.wav",
+                        "volume": 1.0,
+                        "pitch": 1.0,
+                        "loop": false,
+                        "is3D": false
+                    },
+                    {
+                        "name": "reload",
+                        "file": "assets/sounds/weapons/reload.wav",
+                        "volume": 0.8,
+                        "pitch": 1.0,
+                        "loop": false,
+                        "is3D": false
+                    }
+                ]
+            }
+        ]
+    },
+    
+    "example_zombie_entity": {
+        "name": "Zombie",
+        "components": [
+            {
+                "type": "Sound Source",
+                "volumeMultiplier": 1.0,
+                "use3DAudio": true,
+                "maxDistance": 50.0,
+                "rolloffFactor": 1.0,
+                "clips": [
+                    {
+                        "name": "zombie_growl",
+                        "file": "assets/sounds/enemies/zombie_growl.wav",
+                        "volume": 0.9,
+                        "pitch": 1.0,
+                        "loop": false,
+                        "is3D": true
+                    },
+                    {
+                        "name": "zombie_attack",
+                        "file": "assets/sounds/enemies/zombie_attack.wav",
+                        "volume": 1.0,
+                        "pitch": 1.0,
+                        "loop": false,
+                        "is3D": true
+                    },
+                    {
+                        "name": "zombie_death",
+                        "file": "assets/sounds/enemies/zombie_death.wav",
+                        "volume": 1.0,
+                        "pitch": 1.0,
+                        "loop": false,
+                        "is3D": true
+                    }
+                ],
+                "autoPlay": "zombie_growl"
+            }
+        ]
+    },
+    
+    "example_ambient_source": {
+        "name": "AmbientSound",
+        "components": [
+            {
+                "type": "Sound Source",
+                "use3DAudio": true,
+                "maxDistance": 100.0,
+                "clips": [
+                    {
+                        "name": "ambient_wind",
+                        "file": "assets/sounds/ambient/wind.wav",
+                        "volume": 0.5,
+                        "pitch": 1.0,
+                        "loop": true,
+                        "is3D": true
+                    }
+                ],
+                "autoPlay": "ambient_wind"
+            }
+        ]
+    }
+}

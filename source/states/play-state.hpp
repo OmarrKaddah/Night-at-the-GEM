@@ -8,45 +8,78 @@
 #include <systems/movement.hpp>
 #include <systems/physics-system.hpp>
 #include <systems/animation-system.hpp>
+#include <systems/weapon-system.hpp>
 #include <components/animator.hpp>
+#include <components/health.hpp>
 #include <systems/zombie-system.hpp>
+#include <sound/sound-manager.hpp>
 #include <asset-loader.hpp>
 #include <fstream>
 #include <string>
+#include <cstdio>
 #include <material/material.hpp>
 #include <mesh/mesh.hpp>
 
 // This state shows how to use the ECS framework and deserialization.
-class Playstate: public our::State {
+namespace our
+{
+    class Playstate : public State
+    {
 
-    our::World world;
-    our::ForwardRenderer renderer;
-    our::FreeCameraControllerSystem cameraController;
-    our::MovementSystem movementSystem;
-    our::PhysicsSystem physicsSystem;
-    our::AnimationSystem animationSystem;
-    our::ZombieSystem zombieSystem;
-    our::NavGrid2D floor0Grid;
-    our::NavGrid2D floor1Grid;
-    our::NavGrid2D floor2Grid;
-    bool first_frame = true;
-    float previousPlayerY = 0.0f;  // Track Y position for stair detection
+        our::World world;
+        our::ForwardRenderer renderer;
+        our::FreeCameraControllerSystem cameraController;
+        our::MovementSystem movementSystem;
+        our::PhysicsSystem physicsSystem;
+        our::AnimationSystem animationSystem;
+        our::WeaponSystem weaponSystem;
+        our::ZombieSystem zombieSystem;
+        our::NavGrid2D floor0Grid;
+        our::NavGrid2D floor1Grid;
+        our::NavGrid2D floor2Grid;
+        bool first_frame = true;
+        float previousPlayerY = 0.0f; // Track Y position for stair detection
+
+    // Win/Lose + Nights
+    enum class GameOutcome { None, Win, Lose };
+    GameOutcome outcome = GameOutcome::None;
+    int kills = 0;
+    
+    // Night System
+    int currentNight = 1;
+    int totalNightsToWin = 5;
+    int nightsCompleted = 0; 
+    
+    // Stats at End
+    int nightsSurvivedAtEnd = 0;
+    int killsAtEnd = 0;
+    
+    // Time System
+    float nightTimer = 0.0f; // Counts DOWN from nightDuration
+    int currentHour = 12;    // 12, 1, 2, 3, 4, 5
+    int lastHourChime = 12;  // Tracks when to trigger hourly events
 
     // Health System
     float playerHealth = 100.0f;
     float maxHealth = 100.0f;
     float invulnerabilityTimer = 0.0f;
+    float healthRegenCooldown = 0.0f;
+    float healthRegenDelay = 3.0f;     // seconds after taking damage before regen starts
+    float healthRegenRate = 6.0f;      // health per second
     // Win Condition
-    float survivalTimer = 0.0f; // Start at 0
-    float nightDuration = 300.0f; // Default 5 mins
+    float nightDuration = 300.0f; // Default 5 mins (Length of 1 Night)
     bool isWin = false;
     float clockFlashTimer = 0.0f; // Timer for clock overlay display
-    int lastHour = 12; // Track previous hour for chimes
 
     // Missing members restored
     float blurTimer = 0.0f;
     float gameOverTimer = 0.0f;
     bool isDead = false;
+
+    // Footstep System
+    float footstepTimer = 0.0f;
+    float footstepInterval = 0.4f; // Time between footsteps when walking
+    bool wasMoving = false;
 
     // UI Resources
     our::Mesh* uiRectangle = nullptr;
@@ -54,23 +87,78 @@ class Playstate: public our::State {
     our::TintedMaterial* healthBgMaterial = nullptr;
     our::TexturedMaterial* clockMaterial = nullptr;
 
-    void onInitialize() override {
-        // First of all, we get the scene configuration from the app config
-        auto& config = getApp()->getConfig()["scene"];
-        // If we have assets in the scene config, we deserialize them
-        if(config.contains("assets")){
-            // we rely on the loading state to load the assets
-            // our::deserializeAllAssets(config["assets"]);
+
+    float respawnDelayForNight(int night) const {
+        // Night 1: 10s delay
+        // Night 5: 2.0s delay
+        // Scaling: -2.0s per night
+        float delay = 10.0f - (float)(night - 1) * 2.0f;
+        if(delay < 1.0f) delay = 1.0f; // Cap at 1s minimum
+        return delay;
+    }
+
+    void endGame(GameOutcome newOutcome) {
+        if(outcome != GameOutcome::None) return;
+        outcome = newOutcome;
+        nightsSurvivedAtEnd = nightsCompleted;
+        killsAtEnd = kills;
+        isDead = (newOutcome == GameOutcome::Lose);
+        our::Mouse::unlockMouse(getApp()->getWindow());
+        
+        if (newOutcome == GameOutcome::Win) {
+             // Trigger 6 AM Screen (duration 8s)
+             clockFlashTimer = 8.0f;
         }
-        // If we have a world in the scene config, we use it to populate our world
-        if(config.contains("world")){
-            world.deserialize(config["world"]);
+    }
+
+        void onInitialize() override
+        {
+            // First of all, we get the scene configuration from the app config
+            auto &config = getApp()->getConfig()["scene"];
+            // If we have assets in the scene config, we deserialize them
+            if (config.contains("assets"))
+            {
+                // we rely on the loading state to load the assets
+                // our::deserializeAllAssets(config["assets"]);
+            }
+            // If we have a world in the scene config, we use it to populate our world
+            if (config.contains("world"))
+            {
+                world.deserialize(config["world"]);
+            }
+            // We initialize the camera controller system since it needs a pointer to the app
+            cameraController.enter(getApp());
+            // Initialize physics system with gravity
+            physicsSystem.initialize(glm::vec3(0.0f, -9.8f, 0.0f));
+            physicsSystem.registerWorldColliders(&world);
+            weaponSystem.enter(getApp(), &physicsSystem);
+            weaponSystem.setKillCounter(&kills);
+
+        // Game loop state
+        outcome = GameOutcome::None;
+        kills = 0;
+        
+        currentNight = 1;
+        nightsCompleted = 0;
+        nightsSurvivedAtEnd = 0;
+        killsAtEnd = 0;
+        
+        // Read configuration (BEFORE calculating timer)
+        if(config.contains("nightDuration")) {
+            nightDuration = config["nightDuration"].get<float>();
+        } else {
+            nightDuration = 300.0f; // Default 5 mins
         }
-        // We initialize the camera controller system since it needs a pointer to the app
-        cameraController.enter(getApp());
-        // Initialize physics system with gravity
-        physicsSystem.initialize(glm::vec3(0.0f, -9.8f, 0.0f));
-        physicsSystem.registerWorldColliders(&world);
+        
+        // std::cout << "Playstate::onInitialize - Night Duration set to: " << nightDuration << " seconds" << std::endl;
+        
+        nightTimer = nightDuration;
+        currentHour = 12;
+        lastHourChime = 12;
+        clockFlashTimer = 8.0f; // Flash 12 AM (Night 1 Intro) on start for full duration
+        
+        // Initial Difficulty
+        zombieSystem.setRespawnDelaySeconds(respawnDelayForNight(currentNight));
         
         // Initialize navigation grids
         if (config.contains("navigation")) {
@@ -157,6 +245,25 @@ class Playstate: public our::State {
         // Then we initialize the renderer
         auto size = getApp()->getFrameBufferSize();
         renderer.initialize(size, config["renderer"]);
+
+        // Initialize sound system and load sounds
+        SOUND_MANAGER->initialize();
+        SOUND_MANAGER->loadSound("weapon_gunshot", "assets/sounds/weapons/gunshot.wav");
+
+        // Load footstep sounds
+        SOUND_MANAGER->loadSound("footstep_default", "assets/sounds/footsteps/footsteps.wav");
+        SOUND_MANAGER->playSound("footstep_default");
+
+        // Load zombie sounds
+        SOUND_MANAGER->loadSound("zombie_attack", "assets/sounds/zombie/attack.wav");
+        SOUND_MANAGER->loadSound("zombie_death", "assets/sounds/zombie/death.wav");
+
+        // Load player damage sound
+
+        // Play background music
+        SOUND_MANAGER->playMusic("assets/sounds/music/suspense.wav", true);
+        SOUND_MANAGER->setMusicVolume(0.3f); // Lower volume for background
+
         // Explicitly lock mouse when entering state
         getApp()->getMouse().lockMouse(getApp()->getWindow());
         // Explicitly lock mouse when entering state
@@ -169,34 +276,45 @@ class Playstate: public our::State {
         invulnerabilityTimer = 0.0f;
         
         // Reset Win State
-        survivalTimer = 0.0f; // Start at 0 (12:00 AM)
+
         isWin = false;
+        healthRegenCooldown = 0.0f;
 
         // Create UI Rectangle (1x1)
 
 
-        if (!uiRectangle) {
-            uiRectangle = new our::Mesh({
-                {{0.0f, 0.0f, 0.0f}, {255, 255, 255, 255}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-                {{1.0f, 0.0f, 0.0f}, {255, 255, 255, 255}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-                {{1.0f, 1.0f, 0.0f}, {255, 255, 255, 255}, {1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-                {{0.0f, 1.0f, 0.0f}, {255, 255, 255, 255}, {0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-            },{
-                0, 1, 2, 2, 3, 0,
-            });
-        }
+            if (!uiRectangle)
+            {
+                uiRectangle = new our::Mesh({
+                                                {{0.0f, 0.0f, 0.0f}, {255, 255, 255, 255}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+                                                {{1.0f, 0.0f, 0.0f}, {255, 255, 255, 255}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+                                                {{1.0f, 1.0f, 0.0f}, {255, 255, 255, 255}, {1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+                                                {{0.0f, 1.0f, 0.0f}, {255, 255, 255, 255}, {0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+                                            },
+                                            {
+                                                0,
+                                                1,
+                                                2,
+                                                2,
+                                                3,
+                                                0,
+                                            });
+            }
 
-        // Create Health Materials
-        if (!healthBarMaterial) {
-            healthBarMaterial = new our::TintedMaterial();
-            healthBarMaterial->shader = new our::ShaderProgram();
-            healthBarMaterial->shader->attach("assets/shaders/tinted.vert", GL_VERTEX_SHADER);
-            healthBarMaterial->shader->attach("assets/shaders/tinted.frag", GL_FRAGMENT_SHADER);
-            healthBarMaterial->shader->link();
-            healthBarMaterial->tint = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f); // Red
-            healthBarMaterial->pipelineState.depthTesting.enabled = false; // Always on top
-            healthBarMaterial->pipelineState.blending.enabled = true;
-        }
+            // Create Health Materials
+            if (!healthBarMaterial)
+            {
+                healthBarMaterial = new our::TintedMaterial();
+                healthBarMaterial->shader = new our::ShaderProgram();
+                healthBarMaterial->shader->attach("assets/shaders/tinted.vert", GL_VERTEX_SHADER);
+                healthBarMaterial->shader->attach("assets/shaders/tinted.frag", GL_FRAGMENT_SHADER);
+                healthBarMaterial->shader->link();
+                healthBarMaterial->tint = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);   // Red
+                healthBarMaterial->pipelineState.depthTesting.enabled = false; // Always on top
+                healthBarMaterial->pipelineState.blending.enabled = true;
+                healthBarMaterial->pipelineState.blending.sourceFactor = GL_SRC_ALPHA;
+                healthBarMaterial->pipelineState.blending.destinationFactor = GL_ONE_MINUS_SRC_ALPHA;
+            }
 
         if (!healthBgMaterial) {
             healthBgMaterial = new our::TintedMaterial();
@@ -214,107 +332,148 @@ class Playstate: public our::State {
             clockMaterial->tint = glm::vec4(1.0f);
             clockMaterial->pipelineState.depthTesting.enabled = false;
             clockMaterial->pipelineState.blending.enabled = true;
-            clockMaterial->pipelineState.blending.sourceFactor = GL_SRC_ALPHA;
-            clockMaterial->pipelineState.blending.destinationFactor = GL_ONE_MINUS_SRC_ALPHA;
+            clockMaterial->pipelineState.blending.destinationFactor = GL_ONE;
             clockMaterial->sampler = our::AssetLoader<our::Sampler>::get("default");
-            clockMaterial->alphaThreshold = 0.1f; // Ensure transparency works
+            clockMaterial->alphaThreshold = 0.0f; // Disable alpha discard for smooth adding
         }
         
-        // Read configuration
-        if(config.contains("nightDuration")) {
-            nightDuration = config["nightDuration"].get<float>();
-        } else {
-            nightDuration = 300.0f; // Default 5 mins
-        }
-        std::cout << "Playstate::onInitialize - Night Duration set to: " << nightDuration << " seconds" << std::endl;
-        std::cout << "Playstate::onInitialize - Hour Duration: " << (nightDuration / 6.0f) << " seconds" << std::endl;
+
         
-        // Show 12 AM immediately on start
-        clockFlashTimer = 1.5f;
-        lastHour = 12;
     }
 
-    void onDraw(double deltaTime) override {
-        // Handle mouse rotation and keyboard movement for camera
-        auto& mouse = getApp()->getMouse();
-        auto& kb = getApp()->getKeyboard();
-        
-        // Lock mouse on startup
+        void onDraw(double deltaTime) override
+        {
+            float dt = (float)deltaTime;
 
-        
-        for(auto entity : world.getEntities()){
-            auto* collider = entity->getComponent<our::BulletColliderComponent>();
-            auto* camera = entity->getComponent<our::CameraComponent>();
-            // Only apply mouse rotation to entities with a camera
-            if(collider && collider->mass > 0.0f && collider->rigidBody && camera) {
-                // Handle mouse rotation (always active now)
-                glm::vec2 delta = mouse.getMouseDelta();
-                if(first_frame) {
-                    delta = glm::vec2(0.0f);
-                    first_frame = false;
+            // Update sound system
+            SOUND_MANAGER->update(dt);
+
+            // Handle mouse rotation and keyboard movement for camera
+            auto &mouse = getApp()->getMouse();
+            auto &kb = getApp()->getKeyboard();
+            bool gameplayActive = (outcome == GameOutcome::None);
+
+            // Lock mouse on startup
+
+            if (gameplayActive)
+                for (auto entity : world.getEntities())
+                {
+                    auto *collider = entity->getComponent<our::BulletColliderComponent>();
+                    auto *camera = entity->getComponent<our::CameraComponent>();
+                    // Only apply mouse rotation to entities with a camera
+                    if (collider && collider->mass > 0.0f && collider->rigidBody && camera)
+                    {
+                        // Handle mouse rotation (always active now)
+                        glm::vec2 delta = mouse.getMouseDelta();
+                        if (first_frame)
+                        {
+                            delta = glm::vec2(0.0f);
+                            first_frame = false;
+                        }
+
+                        // Deadzone to prevent drift
+                        if (glm::length(delta) < 10.0f)
+                            delta = glm::vec2(0.0f);
+
+                        glm::vec3 rotation = entity->localTransform.rotation;
+                        float lookSensitivity = 0.01f;
+                        if (weaponSystem.isAiming())
+                            lookSensitivity *= 0.5f;
+                        rotation.x -= delta.y * lookSensitivity;
+                        rotation.y -= delta.x * lookSensitivity;
+
+                        // Clamp pitch to prevent flipping
+                        if (rotation.x < -glm::half_pi<float>() * 0.99f)
+                            rotation.x = -glm::half_pi<float>() * 0.99f;
+                        if (rotation.x > glm::half_pi<float>() * 0.99f)
+                            rotation.x = glm::half_pi<float>() * 0.99f;
+                        entity->localTransform.rotation = rotation;
+
+                        // Sync rotation to physics body MANUALLY to avoid resetting linear velocity (which breaks gravity)
+                        // collider->syncFromEntity(); // This was causing the issue because it zeroes velocity!
+
+                        btTransform trans = collider->rigidBody->getWorldTransform();
+
+                        // Only sync Y-rotation (Yaw) to physics body so the capsule stays upright!
+                        // If we pitch the capsule (look down), it will tip over and 'orbit'/'drift'.
+                        glm::vec3 eulerRot = entity->localTransform.rotation;
+                        glm::quat yawQuat = glm::quat(glm::vec3(0, eulerRot.y, 0));
+
+                        trans.setRotation(btQuaternion(yawQuat.x, yawQuat.y, yawQuat.z, yawQuat.w));
+                        collider->rigidBody->setWorldTransform(trans);
+                        if (collider->rigidBody->getMotionState())
+                        {
+                            collider->rigidBody->getMotionState()->setWorldTransform(trans);
+                        }
+
+                        glm::vec3 velocity(0, 0, 0);
+                        float speed = 5.0f;
+
+                        // Get camera direction
+                        glm::mat4 matrix = entity->localTransform.toMat4();
+                        glm::vec3 forward = glm::vec3(matrix * glm::vec4(0, 0, -1, 0));
+                        glm::vec3 right = glm::vec3(matrix * glm::vec4(1, 0, 0, 0));
+
+                        // WASD movement
+                        if (kb.isPressed(GLFW_KEY_W))
+                            velocity += forward * speed;
+                        if (kb.isPressed(GLFW_KEY_S))
+                            velocity -= forward * speed;
+                        if (kb.isPressed(GLFW_KEY_D))
+                            velocity += right * speed;
+                        if (kb.isPressed(GLFW_KEY_A))
+                            velocity -= right * speed;
+
+                        // Footstep sounds
+                        bool isMoving = glm::length(glm::vec2(velocity.x, velocity.z)) > 0.1f;
+
+                        if (isMoving)
+                        {
+                            // FIRST STEP → play immediately
+                            if (!wasMoving)
+                            {
+                                SOUND_MANAGER->playSound("footstep_default");
+                                footstepTimer = footstepInterval;
+                            }
+                            else
+                            {
+                                footstepTimer -= dt;
+                                if (footstepTimer <= 0.0f)
+                                {
+                                    SOUND_MANAGER->playSound("footstep_default");
+                                    footstepTimer = footstepInterval;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            footstepTimer = 0.0f;
+                        }
+
+                        wasMoving = isMoving;
+
+                        // Apply velocity to physics (gravity handles Y)
+                        collider->rigidBody->setLinearVelocity(btVector3(velocity.x, collider->rigidBody->getLinearVelocity().y(), velocity.z));
+                        collider->rigidBody->activate();
+                    }
                 }
-                
-                // Deadzone to prevent drift
-                if(glm::length(delta) < 10.0f) delta = glm::vec2(0.0f); 
-                
-                glm::vec3 rotation = entity->localTransform.rotation;
-                rotation.x -= delta.y * 0.01f;
-                rotation.y -= delta.x * 0.01f;
-                
-                // Clamp pitch to prevent flipping
-                if(rotation.x < -glm::half_pi<float>() * 0.99f) rotation.x = -glm::half_pi<float>() * 0.99f;
-                if(rotation.x > glm::half_pi<float>() * 0.99f) rotation.x = glm::half_pi<float>() * 0.99f;
-                entity->localTransform.rotation = rotation;
-                
-                // Sync rotation to physics body MANUALLY to avoid resetting linear velocity (which breaks gravity)
-                // collider->syncFromEntity(); // This was causing the issue because it zeroes velocity!
-                
-                btTransform trans = collider->rigidBody->getWorldTransform();
-                
-                // Only sync Y-rotation (Yaw) to physics body so the capsule stays upright!
-                // If we pitch the capsule (look down), it will tip over and 'orbit'/'drift'.
-                glm::vec3 eulerRot = entity->localTransform.rotation;
-                glm::quat yawQuat = glm::quat(glm::vec3(0, eulerRot.y, 0)); 
-                
-                trans.setRotation(btQuaternion(yawQuat.x, yawQuat.y, yawQuat.z, yawQuat.w));
-                collider->rigidBody->setWorldTransform(trans);
-                if(collider->rigidBody->getMotionState()) {
-                    collider->rigidBody->getMotionState()->setWorldTransform(trans);
-                }
-                
-                glm::vec3 velocity(0, 0, 0);
-                float speed = 5.0f;
-                
-                // Get camera direction
-                glm::mat4 matrix = entity->localTransform.toMat4();
-                glm::vec3 forward = glm::vec3(matrix * glm::vec4(0, 0, -1, 0));
-                glm::vec3 right = glm::vec3(matrix * glm::vec4(1, 0, 0, 0));
-                
-                // WASD movement
-                if(kb.isPressed(GLFW_KEY_W)) velocity += forward * speed;
-                if(kb.isPressed(GLFW_KEY_S)) velocity -= forward * speed;
-                if(kb.isPressed(GLFW_KEY_D)) velocity += right * speed;
-                if(kb.isPressed(GLFW_KEY_A)) velocity -= right * speed;
-                
-                // Apply velocity to physics (gravity handles Y)
-                collider->rigidBody->setLinearVelocity(btVector3(velocity.x, collider->rigidBody->getLinearVelocity().y(), velocity.z));
-                collider->rigidBody->activate();
+
+            // Run other systems (but NOT camera controller - we handle movement with physics)
+            // movementSystem.update(&world, (float)deltaTime); // DISABLED: overwrites physics velocity!
+            // cameraController.update(&world, (float)deltaTime); // DISABLED
+
+            // Update Zombie AI
+            if (gameplayActive)
+            {
+                weaponSystem.update(&world, dt);
+                zombieSystem.update(&world, dt);
             }
-        }
-        
-        // Run other systems (but NOT camera controller - we handle movement with physics)
-        // movementSystem.update(&world, (float)deltaTime); // DISABLED: overwrites physics velocity!
-        // cameraController.update(&world, (float)deltaTime); // DISABLED
-        
-        // Update Zombie AI
-        zombieSystem.update(&world, (float)deltaTime);
-        
-        // Update animations (Calculate bone positions)
-        animationSystem.update(&world, (float)deltaTime);
-        
+
+            // Update animations (Calculate bone positions)
+            animationSystem.update(&world, dt);
 
         // Update physics simulation (this applies collision response)
-        physicsSystem.update((float)deltaTime);
+        physicsSystem.update(dt);
         
         // Sync physics results BACK to entities
         // Sync physics results BACK to entities
@@ -325,8 +484,8 @@ class Playstate: public our::State {
             }
         }
         
-        // MANUAL COORDINATE LOGGING: Left-click to print current position
-        if (mouse.isPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+        // MANUAL COORDINATE LOGGING: Press F1 to print current position
+        if (kb.justPressed(GLFW_KEY_F1)) {
             for (auto* entity : world.getEntities()) {
                 if (entity->name == "PlayerCamera") {
                     // Log to console
@@ -363,12 +522,12 @@ class Playstate: public our::State {
         
         // --- Health System Logic ---
         if(invulnerabilityTimer > 0.0f) {
-            invulnerabilityTimer -= (float)deltaTime;
+            invulnerabilityTimer -= dt;
         }
         
         // Blur decay
         if(blurTimer > 0.0f) {
-            blurTimer -= (float)deltaTime;
+            blurTimer -= dt;
             if(blurTimer < 0.0f) blurTimer = 0.0f;
         }
 
@@ -384,81 +543,138 @@ class Playstate: public our::State {
              // std::cout << "Death Timer: " << gameOverTimer << std::endl; // Debug log
              
              if(gameOverTimer <= 0.0f) {
-                 std::cout << "Timer finished! Switching to menu..." << std::endl;
-                 getApp()->changeState("menu");
-                 // return; // Removed to allow rendering this frame before switch
+                 // Trigger Game Over Screen Overlay
+                 endGame(GameOutcome::Lose);
              }
         }
-        
-        // Win Logic (FNAF Style: Survive until 6 AM)
-        if(!isDead && playerHealth > 0.0f) {
-            // Use cached duration
-            float gameHourDuration = nightDuration / 6.0f; 
-            
-            survivalTimer += (float)deltaTime; // Reusing variable as "Total Time Elapsed"
-            
-            int currentHour = (int)(survivalTimer / gameHourDuration);
-            if (currentHour == 0) currentHour = 12; // 0 index is 12 AM
-            
-            // Track hour changes
-            if(currentHour != lastHour && currentHour < 6) { // Don't trigger flash for 6am, handled by win logic
-                std::cout << "CLOCK CHIME: It is now " << currentHour << " AM" << std::endl;
-                lastHour = currentHour;
-                clockFlashTimer = 1.5f; // Smoother fade duration
+
+            glm::vec3 playerPos = glm::vec3(0.0f);
+            bool playerFound = false;
+
+            // Find player position
+            for (auto entity : world.getEntities())
+            {
+                if (entity->name == "PlayerCamera")
+                {
+                    playerPos = entity->localTransform.position;
+                    playerFound = true;
+                    break;
+                }
             }
 
-            // Win at 6 AM
-            if(survivalTimer >= (gameHourDuration * 6.0f)) {
-                 if(!isWin) {
-                     isWin = true;
-                     std::cout << "6:00 AM - THE NIGHT IS OVER. YOU WON!" << std::endl;
-                     gameOverTimer = 4.0f; // Celebration pause (Screen Display Time)
-                 }
-                 
-                 gameOverTimer -= (float)deltaTime;
-                 // State switch handled in Render loop
-            }
-        }
+            if (gameplayActive && playerFound && invulnerabilityTimer <= 0.0f && !isDead)
+            { // Don't take damage if dead
+                for (auto entity : world.getEntities())
+                {
+                    if (entity->name.find("Zombie") != std::string::npos)
+                    {
+                        if (auto *health = entity->getComponent<our::HealthComponent>())
+                        {
+                            if (health->isDead())
+                                continue;
+                        }
 
-        glm::vec3 playerPos = glm::vec3(0.0f);
-        bool playerFound = false;
-        
-        // Find player position
-        for(auto entity : world.getEntities()) {
-            if(entity->name == "PlayerCamera") {
-                playerPos = entity->localTransform.position;
-                playerFound = true;
-                break;
-            }
-        }
-        
-        if(playerFound && invulnerabilityTimer <= 0.0f && !isDead) { // Don't take damage if dead
-             for(auto entity : world.getEntities()) {
-                if(entity->name.find("Zombie") != std::string::npos) {
-                    glm::vec3 zombiePos = entity->localTransform.position;
-                    // Adjust zombie pos for center offset (approx 1.0 up)
-                    zombiePos.y += 1.0f; 
+                     glm::vec3 zombiePos = entity->localTransform.position;
+                     // Adjust zombie pos for center offset (approx 1.0 up)
+                     zombiePos.y += 1.0f; 
                     
                     float dist = glm::distance(playerPos, zombiePos);
                     
                     // Collision Threshold (1.5m)
                     if(dist < 1.5f) {
-                        // Take Damage
-                        float damage = 10.0f;
-                        playerHealth -= damage;
-                        if(playerHealth < 0.0f) playerHealth = 0.0f;
-                        
-                        invulnerabilityTimer = 1.0f; // 1 second immunity
-                        
-                        // Trigger Blur
-                        blurTimer = 0.5f; 
-                        
-                        std::cout << "!!! DAMAGE TAKEN !!! Health: " << playerHealth << "/" << maxHealth << std::endl;
-                    }
+                         // Take Damage
+                         float damage = 10.0f;
+                         playerHealth -= damage;
+                         if(playerHealth < 0.0f) playerHealth = 0.0f;
+                         
+                         invulnerabilityTimer = 1.0f; // 1 second immunity
+                         healthRegenCooldown = healthRegenDelay;
+                         
+                         // Trigger Blur
+                         blurTimer = 0.5f; 
+
+                        // Play damage sound
+                        SOUND_MANAGER->playSound("player_hurt");
+                         
+                        //   std::cout << "!!! DAMAGE TAKEN !!! Health: " << playerHealth << "/" << maxHealth << std::endl;
+                     }
                 }
              }
         }
 
+        // Health regeneration (out of combat)
+        if(gameplayActive && !isDead) {
+            if(healthRegenCooldown > 0.0f) {
+                healthRegenCooldown -= dt;
+                if(healthRegenCooldown < 0.0f) healthRegenCooldown = 0.0f;
+            } else if(playerHealth < maxHealth) {
+                playerHealth += healthRegenRate * dt;
+                if(playerHealth > maxHealth) playerHealth = maxHealth;
+            }
+
+            // --- NIGHT / TIME LOGIC ---
+            nightTimer -= dt;
+            
+            // Calculate Hour (12 AM to 6 AM)
+            float hourDuration = nightDuration / 6.0f;
+            int hoursPassed = (int)((nightDuration - nightTimer) / hourDuration);
+            
+            // Clamp to 6 to avoid going to 7 AM briefly
+            if(hoursPassed > 6) hoursPassed = 6;
+            
+            int displayHour = (hoursPassed == 0) ? 12 : hoursPassed;
+            
+            // Check for Hour Change
+            if(displayHour != lastHourChime) {
+                lastHourChime = displayHour;
+                currentHour = displayHour;
+                
+                // Show Clock Flash (e.g. "1 AM")
+                if(displayHour != 12) { // Don't flash 12 immediately at reset if we just flashed 6
+                     clockFlashTimer = 4.0f; 
+                     // std::cout << "It is now " << displayHour << " AM" << std::endl;
+                }
+            }
+
+            if(nightTimer <= 0.0f) {
+                 // NIGHT COMPLETE (6 AM Reached)
+                 nightsCompleted++;
+                 currentNight++;
+                 
+                 // Reset ZOMBIES
+                 zombieSystem.resetAll(&world);
+                 
+                 // Show Night Screen
+                 clockFlashTimer = 8.0f; // Give 8 seconds for "Night X" intermission
+                 
+                 currentHour = 12; // Reset hour to 12
+                 
+                 // Update Difficulty
+                 zombieSystem.setRespawnDelaySeconds(respawnDelayForNight(currentNight));
+                 
+                 // Check Win Condition
+                 if(nightsCompleted >= totalNightsToWin) { 
+                     // WIN
+                     endGame(GameOutcome::Win);
+                 } else {
+                     // NEXT NIGHT START
+                     nightTimer = nightDuration; // Reset timer for next night
+                     // std::cout << "Night " << currentNight << " Started (Intermission)" << std::endl;
+                 }
+            }
+        }
+
+        // INTERMISSION PAUSE LOGIC:
+        // If we are showing "Night X" (currentHour == 12 && clockFlashTimer > 0),
+        // we should PAUSE zombie updates to let them "regenerate" (stay despawned/reset).
+        bool isIntermission = (currentHour == 12 && clockFlashTimer > 0.0f);
+        
+        // Update Zombie AI (ONLY if not in intermission)
+        if(gameplayActive && !isIntermission) {
+            weaponSystem.update(&world, dt);
+            zombieSystem.update(&world, dt);
+        }
+         
         // Update Post-Process Uniforms
         
         // 1. Blood Material
@@ -479,8 +695,8 @@ class Playstate: public our::State {
 
         // And finally we use the renderer system to draw the scene
         renderer.render(&world);
-        
-        // --- Render Health Bar ---
+         
+        // --- Render UI (Health + Crosshair) ---
         {
             // Setup Ortho Projection for UI
             glm::ivec2 size = getApp()->getFrameBufferSize();
@@ -525,12 +741,14 @@ class Playstate: public our::State {
                 healthBarMaterial->shader->set("transform", VP*M2);
                 uiRectangle->draw();
             }
+
+            // 3. Draw Clock / Hour Chime
+            // Determine which hour we are TRANSITIONING TO or completed.
+            // If Win -> 6 AM.
+            // If Flash -> roundsCompleted AM.
             
-            // 3. Draw Clock / Win Screen
-            
-            // Check for 6 AM Win Condition
-            if (isWin) {
-                // RENDER 6 AM SCREEN (Opaque)
+            if (outcome == GameOutcome::Win) {
+                // RENDER 6 AM SCREEN (Solid)
                 clockMaterial->texture = our::AssetLoader<our::Texture2D>::get("time-6am");
                 if (clockMaterial->texture) {
                     glm::mat4 MClock = glm::scale(glm::mat4(1.0f), glm::vec3((float)size.x, (float)size.y, 1.0f));
@@ -542,80 +760,227 @@ class Playstate: public our::State {
                 
                 // Wait for the "Celebration" timer then exit
                 if (gameOverTimer <= 0.0f) {
-                     getApp()->changeState("menu");
+                     // getApp()->changeState("menu"); 
+                     // We let the ImGui overlay handle the exit now
                 }
                 
             } else if (clockFlashTimer > 0.0f) {
-                // HOURLY CHIME (Transparent & Fading)
-                clockFlashTimer -= (float)deltaTime;
+                // HOURLY CHIME / NIGHT INTRO
+                clockFlashTimer -= dt;
                 
-                // Calculate Smooth Fade (0.5 start -> 0.0 end)
-                float alpha = (clockFlashTimer / 1.5f) * 0.5f; // Duration 1.5s for smoothness
-                if(alpha < 0.0f) alpha = 0.0f;
+                // Determine Hour Texture & Settings
+                std::string textureName;
+                our::Texture2D* textureToDraw = nullptr;
+                float alpha = 1.0f;
+                bool isNightIntro = (currentHour == 12);
+
+                if (isNightIntro) {
+                     // NIGHT INTRO (8.0s total)
+                     // Fade In (8->7), Hold (7->1), Fade Out (1->0)
+                     if (clockFlashTimer > 7.0f) alpha = 8.0f - clockFlashTimer;
+                     else if (clockFlashTimer < 1.0f) alpha = clockFlashTimer;
+                     else alpha = 1.0f;
+                     
+                     // Helper to ensure 0-1 range
+                     if (alpha < 0.0f) alpha = 0.0f;
+                     if (alpha > 1.0f) alpha = 1.0f;
+
+                     // Load Night Texture
+                     textureName = "time-night" + std::to_string(currentNight);
+                     textureToDraw = our::AssetLoader<our::Texture2D>::get(textureName);
+                     
+                     // Fallback
+                     if(!textureToDraw) {
+                         std::string path = "assets/textures/time/night" + std::to_string(currentNight) + ".png";
+                         textureToDraw = our::texture_utils::loadImage(path);
+                     }
+                     
+                     // 1. Draw Black Background (Fade with alpha)
+                     glm::mat4 MFull = glm::scale(glm::mat4(1.0f), glm::vec3((float)size.x, (float)size.y, 1.0f));
+                     
+                     healthBgMaterial->tint = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // Solid Black (ignoring alpha? or fade it?)
+                     // User said "have black background". Usually means covers everything.
+                     // If I fade the background, the game reveals behind it.
+                     // If I keep background opaque, it transitions harshly.
+                     // User said "fade in and out", implying the whole overlay.
+                     healthBgMaterial->tint.a = alpha; 
+                     
+                     healthBgMaterial->setup();
+                     healthBgMaterial->shader->set("transform", VP*MFull);
+                     uiRectangle->draw();
+                     
+                     // Switch to Normal Blending for the Image (since it might have its own background or we want it opaque on top of black)
+                     clockMaterial->pipelineState.blending.destinationFactor = GL_ONE_MINUS_SRC_ALPHA;
+                     
+                } else {
+                     // HOURLY CHIME (4.0s total)
+                     // Just fade out at end
+                     if(clockFlashTimer < 1.0f) alpha = clockFlashTimer; // Fade out last second
+                     
+                     textureName = "time-" + std::to_string(currentHour) + "am";
+                     textureToDraw = our::AssetLoader<our::Texture2D>::get(textureName);
+                     
+                     // Use Additive Blending for Hour Chimes (Transparent text)
+                     clockMaterial->pipelineState.blending.destinationFactor = GL_ONE;
+                }
                 
-                float gameHourDuration = nightDuration / 6.0f; 
-                int hourIndex = (int)(survivalTimer / gameHourDuration);
-                 // Don't show 6am here, handled by isWin
-                if (hourIndex >= 6) hourIndex = 5;
-                if (hourIndex == 0) hourIndex = 12; // Handle 0 as 12
-                
-                std::string textureName = "time-";
-                if(hourIndex == 12) textureName += "12am";
-                else textureName += std::to_string(hourIndex) + "am";
-                
-                clockMaterial->texture = our::AssetLoader<our::Texture2D>::get(textureName);
+                clockMaterial->texture = textureToDraw;
                 
                 if(clockMaterial->texture) {
-                    // Fullscreen Overlay
                     glm::mat4 MClock = glm::scale(glm::mat4(1.0f), glm::vec3((float)size.x, (float)size.y, 1.0f));
                                     
                     clockMaterial->setup();
-                    // Apply fading alpha
                     clockMaterial->shader->set("tint", glm::vec4(1.0f, 1.0f, 1.0f, alpha)); 
                     clockMaterial->shader->set("transform", VP*MClock);
                     uiRectangle->draw();
                 }
             }
+
+                // 3. Draw Crosshair (center of screen)
+                {
+                    float centerX = size.x * 0.5f;
+                    float centerY = size.y * 0.5f;
+
+                    bool aiming = weaponSystem.isAiming();
+                    float length = aiming ? 8.0f : 14.0f;
+                    float thickness = 3.0f;
+                    float alpha = aiming ? 0.9f : 0.75f;
+
+                    healthBarMaterial->tint = glm::vec4(1.0f, 1.0f, 1.0f, alpha);
+                    healthBarMaterial->setup();
+
+                    // Horizontal line
+                    glm::mat4 H = glm::translate(glm::mat4(1.0f), glm::vec3(centerX - length, centerY - thickness * 0.5f, 0.0f)) *
+                                  glm::scale(glm::mat4(1.0f), glm::vec3(length * 2.0f, thickness, 1.0f));
+                    healthBarMaterial->shader->set("transform", VP * H);
+                    uiRectangle->draw();
+
+                    // Vertical line
+                    glm::mat4 V = glm::translate(glm::mat4(1.0f), glm::vec3(centerX - thickness * 0.5f, centerY - length, 0.0f)) *
+                                  glm::scale(glm::mat4(1.0f), glm::vec3(thickness, length * 2.0f, 1.0f));
+                    healthBarMaterial->shader->set("transform", VP * V);
+                    uiRectangle->draw();
+                }
+            }
+
+            // Get a reference to the keyboard object
+            auto &keyboard = getApp()->getKeyboard();
+
+            if (keyboard.justPressed(GLFW_KEY_ESCAPE))
+            {
+                getApp()->changeState("menu");
+            }
+
+            // Disable/Enable Skinning (Diagnostic)
+            if (keyboard.justPressed(GLFW_KEY_K))
+            {
+                // Toggle global uniform or iterate entities?
+                // Simpler: Just toggle a static bool and send it
+                static bool skinningEnabled = true;
+                skinningEnabled = !skinningEnabled;
+                std::cout << "Skinning Enabled: " << skinningEnabled << std::endl;
+
+                // Hack: set it on the next draw via material or global uniform
+                // Since we can't easily access the shader directly here without iterating materials,
+                // let's iterate the world and set a property on the material if we could.
+                // Actually, skinned.vert uses a uniform 'useSkinning'.
+                // We need to pass this. For now, let's just print it and realize we need to change how we draw.
+                // BUT, we can pause animation easily!
+            }
+
+            // Pause/Play Animation (Diagnostic)
+            if (keyboard.justPressed(GLFW_KEY_P))
+            {
+                for (auto entity : world.getEntities())
+                {
+                    auto *animator = entity->getComponent<our::AnimatorComponent>();
+                    if (animator)
+                    {
+                        animator->isPlaying = !animator->isPlaying;
+                        std::cout << "Entity " << entity->name << " animation playing: " << animator->isPlaying << std::endl;
+                    }
+                }
+            }
         }
 
-        // Get a reference to the keyboard object
-        auto& keyboard = getApp()->getKeyboard();
+        void onImmediateGui() override
+        {
+            ImGuiIO &io = ImGui::GetIO();
+            ImVec2 displaySize = io.DisplaySize;
 
-        if(keyboard.justPressed(GLFW_KEY_ESCAPE)){
+        // HUD (non-interactive)
+        if(outcome == GameOutcome::None) { // Original condition for HUD
+            ImGui::SetNextWindowPos(ImVec2(displaySize.x - 10.0f, 10.0f), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+            ImGui::SetNextWindowBgAlpha(0.35f);
+            ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+                                     ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs;
+            ImGui::Begin("HUD", nullptr, flags);
+            ImGui::SetWindowFontScale(1.6f);
+            ImGui::Text("Night: %d/%d", currentNight, totalNightsToWin);
+            ImGui::Text("Time: %d AM", currentHour == 0 ? 12 : currentHour); // Handle 0 if happens
+            ImGui::Text("Kills: %d", kills);
+            ImGui::End();
+            return;
+        }
+
+
+        // Game Over / Win screen overlay
+        if (outcome == GameOutcome::Win && clockFlashTimer > 1.0f) {
+            return;
+        }
+
+        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+        ImGui::SetNextWindowSize(displaySize);
+        ImGui::SetNextWindowBgAlpha(0.55f);
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+                                 ImGuiWindowFlags_NoSavedSettings;
+        ImGui::Begin("GameOverOverlay", nullptr, flags);
+
+            auto centeredText = [&](float y, float scale, const char *text)
+            {
+                ImGui::SetWindowFontScale(scale);
+                ImVec2 textSize = ImGui::CalcTextSize(text);
+                ImGui::SetCursorPos(ImVec2((displaySize.x - textSize.x) * 0.5f, y));
+                ImGui::TextUnformatted(text);
+            };
+
+        ImGui::SetWindowFontScale(1.0f);
+        
+        if (outcome == GameOutcome::Win) {
+             centeredText(displaySize.y * 0.25f, 8.0f, "YOU WIN");
+        } else {
+             centeredText(displaySize.y * 0.25f, 8.0f, "GAME OVER");
+        }
+
+        if(outcome == GameOutcome::Win) {
+            centeredText(displaySize.y * 0.40f, 5.0f, "Survived 5 Nights");
+        } else {
+            centeredText(displaySize.y * 0.40f, 5.0f, "YOU DIED");
+        }
+
+        ImGui::SetWindowFontScale(4.0f);
+        {
+            char line[128];
+            std::snprintf(line, sizeof(line), "Nights Survived: %d", nightsSurvivedAtEnd);
+            centeredText(displaySize.y * 0.55f, 4.0f, line);
+
+            std::snprintf(line, sizeof(line), "Kills: %d", killsAtEnd);
+            centeredText(displaySize.y * 0.65f, 4.0f, line);
+        }
+
+        centeredText(displaySize.y * 0.82f, 3.0f, "Press ENTER to return to Menu");
+
+        if(getApp()->getKeyboard().justPressed(GLFW_KEY_ENTER) || getApp()->getKeyboard().justPressed(GLFW_KEY_KP_ENTER)) {
             getApp()->changeState("menu");
         }
-        
-        // Disable/Enable Skinning (Diagnostic)
-        if(keyboard.justPressed(GLFW_KEY_K)){
-            // Toggle global uniform or iterate entities? 
-            // Simpler: Just toggle a static bool and send it
-            static bool skinningEnabled = true;
-            skinningEnabled = !skinningEnabled;
-            std::cout << "Skinning Enabled: " << skinningEnabled << std::endl;
-            
-            // Hack: set it on the next draw via material or global uniform
-            // Since we can't easily access the shader directly here without iterating materials,
-            // let's iterate the world and set a property on the material if we could.
-            // Actually, skinned.vert uses a uniform 'useSkinning'. 
-            // We need to pass this. For now, let's just print it and realize we need to change how we draw.
-            // BUT, we can pause animation easily!
+
+            ImGui::End();
         }
 
-        // Pause/Play Animation (Diagnostic)
-        if(keyboard.justPressed(GLFW_KEY_P)){
-             for(auto entity : world.getEntities()){
-                auto* animator = entity->getComponent<our::AnimatorComponent>();
-                if(animator) {
-                    animator->isPlaying = !animator->isPlaying;
-                    std::cout << "Entity " << entity->name << " animation playing: " << animator->isPlaying << std::endl;
-                }
-             }
-        }
-    }
-
-    void onDestroy() override {
-        std::cout << "Playstate::onDestroy - Start" << std::endl;
-
+        void onDestroy() override
+        {
+            std::cout << "Playstate::onDestroy - Start" << std::endl;
+            SOUND_MANAGER->stopMusic();
         // Destroy UI resources
         std::cout << "Playstate::onDestroy - Cleaning UI" << std::endl;
         if(uiRectangle) { delete uiRectangle; uiRectangle = nullptr; }
@@ -650,15 +1015,16 @@ class Playstate: public our::State {
         std::cout << "Playstate::onDestroy - Destroying Zombie System" << std::endl;
         zombieSystem.destroy();
 
-        // Clear the world (destroys entities and their components)
-        // BulletColliderComponent destructor will delete the rigid bodies
-        std::cout << "Playstate::onDestroy - Clearing World" << std::endl;
-        world.clear();
-        
-        // and we delete all the loaded assets to free memory on the RAM and the VRAM
-        std::cout << "Playstate::onDestroy - Clearing Assets" << std::endl;
-        our::clearAllAssets();
-        
-        std::cout << "Playstate::onDestroy - End" << std::endl;
-    }
-};
+            // Clear the world (destroys entities and their components)
+            // BulletColliderComponent destructor will delete the rigid bodies
+            std::cout << "Playstate::onDestroy - Clearing World" << std::endl;
+            world.clear();
+
+            // and we delete all the loaded assets to free memory on the RAM and the VRAM
+            std::cout << "Playstate::onDestroy - Clearing Assets" << std::endl;
+            our::clearAllAssets();
+
+            std::cout << "Playstate::onDestroy - End" << std::endl;
+        }
+    };
+}
