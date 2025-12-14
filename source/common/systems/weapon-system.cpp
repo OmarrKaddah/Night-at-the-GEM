@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include "weapon-system.hpp"
 #include "physics-system.hpp"
 #include <glm/glm.hpp>
@@ -5,6 +6,7 @@
 #include <iostream>
 #include <random>
 #include "../components/animator.hpp"
+#include "../sound/sound-manager.hpp"
 
 namespace our {
 
@@ -102,6 +104,9 @@ void WeaponSystem::update(World* world, float deltaTime) {
     if (!mouse.justPressed(GLFW_MOUSE_BUTTON_LEFT)) return;
 
     std::cout << "[Weapon] Fire" << std::endl;
+    
+    // Play gunshot sound
+    SOUND_MANAGER->playSound("weapon_gunshot");
 
     // Ray origin (camera position in world space)
     glm::mat4 cameraTransform = player->getLocalToWorldMatrix();
@@ -135,6 +140,11 @@ void WeaponSystem::update(World* world, float deltaTime) {
 
             if(wasAlive && health->isDead()) {
                 if(killCounter) (*killCounter)++;
+                
+                // Play zombie death sound
+                if(hitEntity->name.find("Zombie") != std::string::npos) {
+                    SOUND_MANAGER->playSound("zombie_death");
+                }
             } else if(!health->isDead()) {
                 if(auto* animator = hitEntity->getComponent<AnimatorComponent>()) {
                     if(animator->animations.find("hit") != animator->animations.end()) {

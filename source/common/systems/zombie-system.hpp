@@ -26,7 +26,12 @@ namespace our
         NavGrid2D* floor2Grid = nullptr;
         Pathfinder2D pathfinder;
         
-        struct ZombieState {
+
+
+        float respawnDelaySeconds = 10.0f;
+
+    public:
+            struct ZombieState {
             std::vector<glm::vec3> path;
             size_t pathIndex = 0;
             float pathTimer = 0.0f;
@@ -39,12 +44,13 @@ namespace our
             glm::vec3 spawnPosition = glm::vec3(0);
             glm::vec3 spawnRotation = glm::vec3(0);
             glm::vec3 spawnScale = glm::vec3(1);
+
+            float soundTimer = 0.0f;      // Timer for ambient growls
+            float attackSoundCooldown = 0.0f; // Cooldown for attack sounds
         };
+        
         std::unordered_map<Entity*, ZombieState> states;
 
-        float respawnDelaySeconds = 10.0f;
-
-    public:
         void setRespawnDelaySeconds(float seconds) {
             respawnDelaySeconds = (seconds < 0.5f) ? 0.5f : seconds;
         }

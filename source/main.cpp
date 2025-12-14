@@ -18,7 +18,7 @@
 #include "states/renderer-test-state.hpp"
 
 #include "states/loading-state.hpp"
-
+using namespace our;
 int main(int argc, char** argv) {
     
     flags::args args(argc, argv); // Parse the command line arguments
