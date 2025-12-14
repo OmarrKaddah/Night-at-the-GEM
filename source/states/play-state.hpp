@@ -388,21 +388,31 @@ namespace our
 
                         // Footstep sounds
                         bool isMoving = glm::length(glm::vec2(velocity.x, velocity.z)) > 0.1f;
+
                         if (isMoving)
                         {
-                            footstepTimer -= dt;
-                            if (footstepTimer <= 0.0f)
+                            // FIRST STEP → play immediately
+                            if (!wasMoving)
                             {
-                                std::cout << "[Footstep] PLAY\n";
-
                                 SOUND_MANAGER->playSound("footstep_default");
-                                footstepTimer = 0.0f;
+                                footstepTimer = footstepInterval;
+                            }
+                            else
+                            {
+                                footstepTimer -= dt;
+                                if (footstepTimer <= 0.0f)
+                                {
+                                    SOUND_MANAGER->playSound("footstep_default");
+                                    footstepTimer = footstepInterval;
+                                }
                             }
                         }
                         else
                         {
-                            footstepTimer = footstepInterval; // Reset timer when stopped
+                            footstepTimer = 0.0f;
                         }
+
+                        wasMoving = isMoving;
 
                         // Apply velocity to physics (gravity handles Y)
                         collider->rigidBody->setLinearVelocity(btVector3(velocity.x, collider->rigidBody->getLinearVelocity().y(), velocity.z));
