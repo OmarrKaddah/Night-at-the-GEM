@@ -9,7 +9,7 @@ bin/
 imgui.ini
 
 # Asset files
-
+*.png
 *.jpg
 *.jpeg
 *.obj
