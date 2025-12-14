@@ -337,8 +337,15 @@ namespace our
                 }
                 
                 // Animation
-                if(auto animator = entity->getComponent<AnimatorComponent>()) {
-                    animator->currentAnimation = "walk";
+                if(auto* animator = entity->getComponent<AnimatorComponent>()) {
+                    // If a non-looping animation is currently playing (e.g., hit), don't overwrite it.
+                    if(animator->isPlaying && !animator->loop) {
+                        continue;
+                    }
+                    // Otherwise, keep the zombie in the walk loop.
+                    if(animator->currentAnimation != "walk" || !animator->isPlaying || !animator->loop) {
+                        animator->playAnimation("walk", true);
+                    }
                 }
             }
         }

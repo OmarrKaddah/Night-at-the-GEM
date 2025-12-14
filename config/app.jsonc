@@ -731,6 +731,7 @@
             "animations": {
               "walk": "assets/animations/zombie@walk.fbx",
               "idle": "assets/animations/zombie@idle1.fbx",
+              "hit": "assets/animations/zombie@gethit.fbx",
               "death": "assets/animations/zombie@death1.fbx"
             },
             "currentAnimation": "idle",
@@ -790,6 +791,7 @@
             "animations": {
               "walk": "assets/animations/zombie@walk.fbx",
               "idle": "assets/animations/zombie@idle1.fbx",
+              "hit": "assets/animations/zombie@gethit.fbx",
               "death": "assets/animations/zombie@death1.fbx"
             },
             "currentAnimation": "walk",
@@ -849,6 +851,7 @@
             "animations": {
               "walk": "assets/animations/zombie@walk.fbx",
               "idle": "assets/animations/zombie@idle1.fbx",
+              "hit": "assets/animations/zombie@gethit.fbx",
               "death": "assets/animations/zombie@death1.fbx"
             },
             "currentAnimation": "idle",

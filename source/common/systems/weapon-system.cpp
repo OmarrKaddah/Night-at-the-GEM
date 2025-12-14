@@ -4,6 +4,7 @@
 #include <glm/gtc/constants.hpp>
 #include <iostream>
 #include <random>
+#include "../components/animator.hpp"
 
 namespace our {
 
@@ -130,6 +131,14 @@ void WeaponSystem::update(World* world, float deltaTime) {
 
         if (auto* health = hitEntity->getComponent<HealthComponent>()) {
             health->applyDamage(damage);
+
+            if(!health->isDead()) {
+                if(auto* animator = hitEntity->getComponent<AnimatorComponent>()) {
+                    if(animator->animations.find("hit") != animator->animations.end()) {
+                        animator->playAnimation("hit", false);
+                    }
+                }
+            }
 
             std::cout << "[Weapon] Hit " << hitEntity->name
                       << " | Health: " << health->currentHealth << std::endl;
