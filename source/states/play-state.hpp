@@ -22,7 +22,7 @@
 #include <cstdio>
 #include <material/material.hpp>
 #include <mesh/mesh.hpp>
-
+#include <algorithm>
 // This state shows how to use the ECS framework and deserialization.
 namespace our
 {
@@ -179,9 +179,9 @@ namespace our
                 // Load obstacles
                 if (f0.contains("obstacles")) {
                     for (auto& obs : f0["obstacles"]) {
-                        glm::ivec2 min(obs["min"][0], obs["min"][1]);
-                        glm::ivec2 max(obs["max"][0], obs["max"][1]);
-                        floor0Grid.setObstacle(min, max);
+                        glm::ivec2 minMin(obs["min"][0], obs["min"][1]);
+                        glm::ivec2 maxMax(obs["max"][0], obs["max"][1]);
+                        floor0Grid.setObstacle(minMin, maxMax);
                     }
                 }
             }
@@ -198,9 +198,9 @@ namespace our
                 // Load obstacles
                 if (f1.contains("obstacles")) {
                     for (auto& obs : f1["obstacles"]) {
-                        glm::ivec2 min(obs["min"][0], obs["min"][1]);
-                        glm::ivec2 max(obs["max"][0], obs["max"][1]);
-                        floor1Grid.setObstacle(min, max);
+                        glm::ivec2 minMin(obs["min"][0], obs["min"][1]);
+                        glm::ivec2 maxMax(obs["max"][0], obs["max"][1]);
+                        floor1Grid.setObstacle(minMin, maxMax);
                     }
                 }
             }
@@ -217,9 +217,9 @@ namespace our
                 // Load obstacles
                 if (f2.contains("obstacles")) {
                     for (auto& obs : f2["obstacles"]) {
-                        glm::ivec2 min(obs["min"][0], obs["min"][1]);
-                        glm::ivec2 max(obs["max"][0], obs["max"][1]);
-                        floor2Grid.setObstacle(min, max);
+                        glm::ivec2 minMin(obs["min"][0], obs["min"][1]);
+                        glm::ivec2 maxMax(obs["max"][0], obs["max"][1]);
+                        floor2Grid.setObstacle(minMin, maxMax);
                     }
                 }
             }
