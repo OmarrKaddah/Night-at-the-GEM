@@ -110,7 +110,7 @@ namespace our {
     void PhysicsSystem::registerWorldColliders(World* world) {
         if (!world) return;
         
-        std::cout << "PhysicsSystem: Registering colliders from world..." << std::endl;
+        // std::cout << "PhysicsSystem: Registering colliders from world..." << std::endl;
         int colliderCount = 0;
         
         // Iterate through all entities and register colliders
@@ -120,7 +120,7 @@ namespace our {
             // Check if entity has a BulletColliderComponent
             auto* collider = entity->getComponent<BulletColliderComponent>();
             if (collider) {
-                std::cout << "  Found collider on entity: " << entity->name << std::endl;
+                // std::cout << "  Found collider on entity: " << entity->name << std::endl;
                 registerCollider(collider);
                 colliderCount++;
             }
@@ -129,7 +129,7 @@ namespace our {
             // Note: You'd need to implement a method to get all descendants
         }
         
-        std::cout << "PhysicsSystem: Registered " << colliderCount << " colliders" << std::endl;
+        // std::cout << "PhysicsSystem: Registered " << colliderCount << " colliders" << std::endl;
     }
 
     void PhysicsSystem::setGravity(const glm::vec3& gravityVec) {

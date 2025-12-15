@@ -82,10 +82,10 @@ vec3 calc_light(Light light, vec3 normal, vec3 view_dir, vec3 albedo, vec3 spec_
         }
     }
 
-    // Diffuse (Lambert) - two-sided to handle flipped normals
-    float diff = abs(dot(normal, light_dir));
+    // Diffuse (Lambert) - standard one-sided lighting
+    float diff = max(dot(normal, light_dir), 0.0);
     // Add slight rim lighting for more realistic appearance
-    float rim = pow(1.0 - abs(dot(normal, view_dir)), 2.0) * 0.1;
+    float rim = pow(1.0 - max(dot(normal, view_dir), 0.0), 2.0) * 0.1;
     vec3 diffuse = (diff + rim) * albedo;
 
     // Specular (Blinn-Phong) with more realistic distribution

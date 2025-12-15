@@ -18,8 +18,8 @@ namespace our {
         #include "bone_matcher.inl"
 
         Mesh* loadAnimatedMesh(const std::string& filename, std::shared_ptr<Skeleton>& outSkeleton) {
-            std::cout << "========================================" << std::endl;
-            std::cout << "Animated Mesh Loader: Starting to load " << filename << std::endl;
+            // std::cout << "========================================" << std::endl;
+            // std::cout << "Animated Mesh Loader: Starting to load " << filename << std::endl;
             
             Assimp::Importer importer;
             
@@ -41,18 +41,18 @@ namespace our {
                 return nullptr;
             }
 
-            std::cout << "Scene loaded successfully!" << std::endl;
-            std::cout << "  Meshes: " << scene->mNumMeshes << std::endl;
-            std::cout << "  Materials: " << scene->mNumMaterials << std::endl;
-            std::cout << "  Animations: " << scene->mNumAnimations << std::endl;
-            std::cout << "  Textures: " << scene->mNumTextures << std::endl;
+            // std::cout << "Scene loaded successfully!" << std::endl;
+            // std::cout << "  Meshes: " << scene->mNumMeshes << std::endl;
+            // std::cout << "  Materials: " << scene->mNumMaterials << std::endl;
+            // std::cout << "  Animations: " << scene->mNumAnimations << std::endl;
+            // std::cout << "  Textures: " << scene->mNumTextures << std::endl;
 
             // Load skeleton first
             try {
-                std::cout << "Loading skeleton..." << std::endl;
+                // std::cout << "Loading skeleton..." << std::endl;
                 outSkeleton = AnimationLoader::loadSkeleton(filename);
-                std::cout << "Skeleton loaded successfully with " << outSkeleton->bones.size() << " bones" << std::endl;
-                std::cout << "Now processing mesh geometry..." << std::endl;
+                // std::cout << "Skeleton loaded successfully with " << outSkeleton->bones.size() << " bones" << std::endl;
+                // std::cout << "Now processing mesh geometry..." << std::endl;
             } catch (const std::exception& e) {
                 std::cerr << "Failed to load skeleton: " << e.what() << std::endl;
                 std::cerr << "Will try to load mesh without skeleton..." << std::endl;
@@ -253,19 +253,19 @@ namespace our {
                 localSubmeshes.push_back(sub);
             }
 
-            std::cout << "Mesh processing complete: " << vertices.size() 
-                      << " vertices, " << elements.size() / 3 << " triangles";
-            if (outSkeleton) {
-                std::cout << ", " << outSkeleton->bones.size() << " bones";
-            }
-            std::cout << std::endl;
+            // std::cout << "Mesh processing complete: " << vertices.size() 
+            //           << " vertices, " << elements.size() / 3 << " triangles";
+            // if (outSkeleton) {
+            //     std::cout << ", " << outSkeleton->bones.size() << " bones";
+            // }
+            // std::cout << std::endl;
 
-            std::cout << "Creating Mesh object..." << std::endl;
+            // std::cout << "Creating Mesh object..." << std::endl;
             Mesh* result = new Mesh(vertices, elements);
             // assign submeshes collected earlier
             result->submeshes = std::move(localSubmeshes);
-            std::cout << "Mesh created successfully!" << std::endl;
-            std::cout << "========================================" << std::endl;
+            // std::cout << "Mesh created successfully!" << std::endl;
+            // std::cout << "========================================" << std::endl;
             
             return result;
         }
