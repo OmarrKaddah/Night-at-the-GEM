@@ -509,12 +509,12 @@ namespace our
             // movementSystem.update(&world, (float)deltaTime); // DISABLED: overwrites physics velocity!
             // cameraController.update(&world, (float)deltaTime); // DISABLED
 
-            // // Update Zombie AI
-            // if (gameplayActive)
-            // {
-            //     weaponSystem.update(&world, dt);
-            //     zombieSystem.update(&world, dt);
-            // }
+            // Update Zombie AI
+            if (gameplayActive)
+            {
+                weaponSystem.update(&world, dt);
+                zombieSystem.update(&world, dt);
+            }
 
             // Update animations (Calculate bone positions)
             animationSystem.update(&world, dt);
@@ -625,12 +625,12 @@ namespace our
             // movementSystem.update(&world, (float)deltaTime); // DISABLED: overwrites physics velocity!
             // cameraController.update(&world, (float)deltaTime); // DISABLED
 
-            // Update Zombie AI
-            // if (gameplayActive)
-            // {
-            //     weaponSystem.update(&world, dt);
-            //     zombieSystem.update(&world, dt);
-            // }
+           // Update Zombie AI
+            if (gameplayActive)
+            {
+                weaponSystem.update(&world, dt);
+                zombieSystem.update(&world, dt);
+            }
 
             // Update animations (Calculate bone positions)
             animationSystem.update(&world, dt);

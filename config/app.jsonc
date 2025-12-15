@@ -246,8 +246,7 @@
         "zombie-death": "assets/animations/zombie@death1.fbx",
         "zombie-walk-glb": "assets/animations/zombie@walk.glb",
         "zombie-idle-glb": "assets/animations/zombie@idle1.glb",
-        "zombie-death-glb": "assets/animations/zombie@death1.glb",
-        "cube": "vendor/bullet3/data/cube.obj"
+        "zombie-death-glb": "assets/animations/zombie@death1.glb"
       },
       "samplers": {
         "default": {},
@@ -539,35 +538,6 @@
           "roughness": 0.8,
           "ao": 1.0
         },
-        "lamp-material": {
-          "type": "lit",
-          "shader": "lit",
-          "pipelineState": {
-            "faceCulling": {
-              "enabled": false
-            },
-            "depthTesting": {
-              "enabled": true
-            }
-          },
-          "albedo": [
-            1.0,
-            0.95,
-            0.8
-          ],
-          "emissive": [
-            2.0,
-            1.9,
-            1.5
-          ],
-          "specular": [
-            0.5,
-            0.5,
-            0.4
-          ],
-          "roughness": 0.3,
-          "ao": 1.0
-        },
         "metal": {
           "type": "tinted",
           "shader": "tinted",
@@ -621,7 +591,7 @@
         "position": [
           0,
           2.0,
-          24
+          15
         ],
         "rotation": [
           0,
@@ -728,42 +698,36 @@
         ]
       },
       {
-        "name": "RoomLamp",
+        "name": "CeilingLight",
         "position": [
           0,
-          7.0,
+          25,
           18
         ],
         "rotation": [
-          0,
+          90,
           0,
           0
         ],
-        "scale": [
-          0.3,
-          0.3,
-          0.3
-        ],
         "components": [
-          {
-            "type": "Mesh Renderer",
-            "mesh": "cube",
-            "material": "lamp-material"
-          },
+          /*
           {
             "type": "Light",
-            "lightType": "point",
+            "lightType": "spot",
             "color": [
-              2.5,
-              2.3,
-              1.8
+              15.0,
+              15.5,
+              16.0
             ],
             "attenuation": {
               "constant": 1.0,
-              "linear": 0.09,
-              "quadratic": 0.032
-            }
+              "linear": 0.03,
+              "quadratic": 0.01
+            },
+            "inner_angle": 35.0,
+            "outer_angle": 85.0
           }
+          */
         ]
       },
       {
@@ -771,7 +735,7 @@
         "position": [
           -2,
           0.2,
-          0
+          12
         ],
         "rotation": [
           0,
@@ -831,7 +795,7 @@
         "position": [
           2,
           0.2,
-          0
+          12
         ],
         "rotation": [
           0,
@@ -891,7 +855,7 @@
         "position": [
           0,
           0.2,
-          0
+          12
         ],
         "rotation": [
           0,
