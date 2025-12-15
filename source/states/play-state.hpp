@@ -106,12 +106,17 @@ namespace our
         nightsSurvivedAtEnd = nightsCompleted;
         killsAtEnd = kills;
         isDead = (newOutcome == GameOutcome::Lose);
+        SOUND_MANAGER->stopMusic();
         our::Mouse::unlockMouse(getApp()->getWindow());
         
         if (newOutcome == GameOutcome::Win) {
              // Trigger 6 AM Screen (duration 8s)
+                     SOUND_MANAGER->playSound("win_sound");
+
              clockFlashTimer = 8.0f;
-        }
+        } else {
+        SOUND_MANAGER->playSound("lose_sound");
+    }
     }
 
         void onInitialize() override
@@ -260,6 +265,9 @@ namespace our
         // Load zombie sounds
         SOUND_MANAGER->loadSound("zombie_attack", "assets/sounds/zombie/attack.wav");
         SOUND_MANAGER->loadSound("zombie_death", "assets/sounds/zombie/death.wav");
+        // Load end-game sounds
+SOUND_MANAGER->loadSound("win_sound",  "assets/sounds/music/win-sound.wav");
+SOUND_MANAGER->loadSound("lose_sound", "assets/sounds/music/lose-sound.wav");
 
         // Load player damage sound
 
