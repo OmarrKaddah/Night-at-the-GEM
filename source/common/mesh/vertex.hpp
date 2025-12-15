@@ -22,6 +22,11 @@ namespace our {
         int boneIDs[MAX_BONE_INFLUENCE] = {-1, -1, -1, -1};      // IDs of bones that influence this vertex
         float boneWeights[MAX_BONE_INFLUENCE] = {0.0f, 0.0f, 0.0f, 0.0f}; // Weights of bone influence
 
+        Vertex() = default;
+
+        Vertex(glm::vec3 position, Color color, glm::vec2 tex_coord, glm::vec3 normal) 
+            : position(position), color(color), tex_coord(tex_coord), normal(normal) {}
+
         // We plan to use this as a key for a map so we need to define the equality operator
         bool operator==(const Vertex& other) const {
             return position == other.position &&

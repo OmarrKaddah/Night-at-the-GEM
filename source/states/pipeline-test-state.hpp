@@ -46,9 +46,9 @@ class PipelineTestState: public our::State {
         // Then we read the camera information to compute the VP matrix
         if(config.contains("camera")){
             if(auto& camera = config["camera"]; camera.is_object()){
-                glm::vec3 eye = camera.value("eye", glm::vec3(0, 0, 0));
-                glm::vec3 center = camera.value("center", glm::vec3(0, 0, -1));
-                glm::vec3 up = camera.value("up", glm::vec3(0, 1, 0));
+                glm::vec3 eye = camera.contains("eye") ? camera["eye"].get<glm::vec3>() : glm::vec3(0, 0, 0);
+                glm::vec3 center = camera.contains("center") ? camera["center"].get<glm::vec3>() : glm::vec3(0, 0, -1);
+                glm::vec3 up = camera.contains("up") ? camera["up"].get<glm::vec3>() : glm::vec3(0, 1, 0);
                 glm::mat4 V = glm::lookAt(eye, center, up);
 
                 float fov = glm::radians(camera.value("fov", 90.0f));
@@ -67,7 +67,7 @@ class PipelineTestState: public our::State {
             pipeline.deserialize(config["pipeline"]);
         }
         // We also read the clear color and depth since we may want to change it
-        glm::vec4 clearColor = config.value("clearColor", glm::vec4(0, 0, 0, 0));
+        glm::vec4 clearColor = config.contains("clearColor") ? config["clearColor"].get<glm::vec4>() : glm::vec4(0, 0, 0, 0);
         glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
         glClearDepth(config.value("clearDepth", 1.0f));
     }

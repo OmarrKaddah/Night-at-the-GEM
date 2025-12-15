@@ -31,14 +31,17 @@ class ShaderTestState: public our::State {
                     int value = uniform.value("value", 0);
                     shader->set(name, value);
                 } else if(type == "vec2"){
-                    glm::vec2 value = uniform.value("value", glm::vec2(0,0));
-                    shader->set(name, value);
+                    glm::vec2 defaultVal(0,0);
+                    if(uniform.contains("value")) shader->set(name, uniform["value"].get<glm::vec2>());
+                    else shader->set(name, defaultVal);
                 } else if(type == "vec3"){
-                    glm::vec3 value = uniform.value("value", glm::vec3(0,0,0));
-                    shader->set(name, value);
+                    glm::vec3 defaultVal(0,0,0);
+                    if(uniform.contains("value")) shader->set(name, uniform["value"].get<glm::vec3>());
+                    else shader->set(name, defaultVal);
                 } else if(type == "vec4"){
-                    glm::vec4 value = uniform.value("value", glm::vec4(0,0,0,0));
-                    shader->set(name, value);
+                    glm::vec4 defaultVal(0,0,0,0);
+                    if(uniform.contains("value")) shader->set(name, uniform["value"].get<glm::vec4>());
+                    else shader->set(name, defaultVal);
                 }
             }
         }

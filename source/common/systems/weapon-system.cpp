@@ -103,8 +103,6 @@ void WeaponSystem::update(World* world, float deltaTime) {
     // Single shot per click
     if (!mouse.justPressed(GLFW_MOUSE_BUTTON_LEFT)) return;
 
-    std::cout << "[Weapon] Fire" << std::endl;
-    
     // Play gunshot sound
     SOUND_MANAGER->playSound("weapon_gunshot");
 

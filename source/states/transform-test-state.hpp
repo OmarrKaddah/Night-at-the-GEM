@@ -44,9 +44,9 @@ class TransformTestState: public our::State {
         // Then we read the camera information to compute the VP matrix
         if(config.contains("camera")){
             if(auto& camera = config["camera"]; camera.is_object()){
-                glm::vec3 eye = camera.value("eye", glm::vec3(0, 0, 0));
-                glm::vec3 center = camera.value("center", glm::vec3(0, 0, -1));
-                glm::vec3 up = camera.value("up", glm::vec3(0, 1, 0));
+                glm::vec3 eye = camera.contains("eye") ? camera["eye"].get<glm::vec3>() : glm::vec3(0, 0, 0);
+                glm::vec3 center = camera.contains("center") ? camera["center"].get<glm::vec3>() : glm::vec3(0, 0, -1);
+                glm::vec3 up = camera.contains("up") ? camera["up"].get<glm::vec3>() : glm::vec3(0, 1, 0);
                 glm::mat4 V = glm::lookAt(eye, center, up);
 
                 float fov = glm::radians(camera.value("fov", 90.0f));

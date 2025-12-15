@@ -7,14 +7,11 @@
 #include <material/material.hpp>
 #include <mesh/mesh.hpp>
 #include <sound/sound-manager.hpp>
-#include <sound/sound-manager.hpp>
 
 #include <functional>
 #include <array>
 
 // This struct is used to store the location and size of a button and the code it should execute when clicked
-struct Button
-{
 struct Button
 {
     // The position (of the top-left corner) of the button and its size in pixels
@@ -26,11 +23,7 @@ struct Button
     // This is used to check if the mouse is hovering over the button.
     bool isInside(const glm::vec2 &v) const
     {
-    bool isInside(const glm::vec2 &v) const
-    {
         return position.x <= v.x && position.y <= v.y &&
-               v.x <= position.x + size.x &&
-               v.y <= position.y + size.y;
                v.x <= position.x + size.x &&
                v.y <= position.y + size.y;
     }
@@ -41,27 +34,18 @@ struct Button
     {
         return glm::translate(glm::mat4(1.0f), glm::vec3(position.x, position.y, 0.0f)) *
                glm::scale(glm::mat4(1.0f), glm::vec3(size.x, size.y, 1.0f));
-    glm::mat4 getLocalToWorld() const
-    {
-        return glm::translate(glm::mat4(1.0f), glm::vec3(position.x, position.y, 0.0f)) *
-               glm::scale(glm::mat4(1.0f), glm::vec3(size.x, size.y, 1.0f));
     }
 };
 
 // This state shows how to use some of the abstractions we created to make a menu.
 class Menustate : public our::State
 {
-class Menustate : public our::State
-{
 
     // A meterial holding the menu shader and the menu texture to draw
     our::TexturedMaterial *menuMaterial;
-    our::TexturedMaterial *menuMaterial;
     // A material to be used to highlight hovered buttons (we will use blending to create a negative effect).
     our::TintedMaterial *highlightMaterial;
-    our::TintedMaterial *highlightMaterial;
     // A rectangle mesh on which the menu material will be drawn
-    our::Mesh *rectangle;
     our::Mesh *rectangle;
     // A variable to record the time since the state is entered (it will be used for the fading effect).
     float time;
@@ -74,8 +58,6 @@ class Menustate : public our::State
     float transitionTime = 0.0f;
     int focusedButton = 0;
 
-    void onInitialize() override
-    {
     void onInitialize() override
     {
         std::cout << "Menustate::onInitialize - Start" << std::endl;
@@ -111,28 +93,14 @@ class Menustate : public our::State
 
         // Then we create a rectangle whose top-left corner is at the origin and its size is 1x1.
         // Note that the texture coordinates at the origin is (0.0, 1.0) since we will use the
-        // Note that the texture coordinates at the origin is (0.0, 1.0) since we will use the
         // projection matrix to make the origin at the the top-left corner of the screen.
-        rectangle = new our::Mesh({
-                                      {{0.0f, 0.0f, 0.0f}, {255, 255, 255, 255}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-                                      {{1.0f, 0.0f, 0.0f}, {255, 255, 255, 255}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-                                      {{1.0f, 1.0f, 0.0f}, {255, 255, 255, 255}, {1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-                                      {{0.0f, 1.0f, 0.0f}, {255, 255, 255, 255}, {0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        rectangle = new our::Mesh(std::vector<our::Vertex>{
+                                      our::Vertex{glm::vec3(0.0f, 0.0f, 0.0f), our::Color(255, 255, 255, 255), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+                                      our::Vertex{glm::vec3(1.0f, 0.0f, 0.0f), our::Color(255, 255, 255, 255), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+                                      our::Vertex{glm::vec3(1.0f, 1.0f, 0.0f), our::Color(255, 255, 255, 255), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+                                      our::Vertex{glm::vec3(0.0f, 1.0f, 0.0f), our::Color(255, 255, 255, 255), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
                                   },
-                                  {
-                                      0,
-                                      1,
-                                      2,
-                                      2,
-                                      3,
-                                      0,
-                                  });
-                                      {{0.0f, 0.0f, 0.0f}, {255, 255, 255, 255}, {0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-                                      {{1.0f, 0.0f, 0.0f}, {255, 255, 255, 255}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-                                      {{1.0f, 1.0f, 0.0f}, {255, 255, 255, 255}, {1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-                                      {{0.0f, 1.0f, 0.0f}, {255, 255, 255, 255}, {0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-                                  },
-                                  {
+                                  std::vector<unsigned int>{
                                       0,
                                       1,
                                       2,
@@ -155,12 +123,9 @@ class Menustate : public our::State
         // - The argument list () which is the arguments that the lambda should receive when it is called.
         //      We leave it empty since button actions receive no input.
         // - The body {} which contains the code to be executed.
-        // - The body {} which contains the code to be executed.
         // Define normalized button rects (fractions of the framebuffer).
         // Adjust these values if the regions do not align perfectly with the image text.
         // Format: { x_frac, y_frac, width_frac, height_frac } (top-left origin)
-        buttonNorms[0] = {0.43f, 0.43f, 0.106f, 0.07f};   // PLAY
-        buttonNorms[1] = {0.40f, 0.552f, 0.174f, 0.07f};  // OPTIONS
         buttonNorms[0] = {0.43f, 0.43f, 0.106f, 0.07f};   // PLAY
         buttonNorms[1] = {0.40f, 0.552f, 0.174f, 0.07f};  // OPTIONS
         buttonNorms[2] = {0.435f, 0.675f, 0.095f, 0.07f}; // EXIT
@@ -172,17 +137,9 @@ class Menustate : public our::State
         { std::cout << "Options selected" << std::endl; };
         buttons[2].action = [this]()
         { this->getApp()->close(); };
-        buttons[0].action = [this]()
-        { this->transitionOut = true; };
-        buttons[1].action = [this]()
-        { std::cout << "Options selected" << std::endl; };
-        buttons[2].action = [this]()
-        { this->getApp()->close(); };
 
         // Convert normalized rects to pixel coordinates based on the current framebuffer size
         glm::ivec2 fb = getApp()->getFrameBufferSize();
-        for (int i = 0; i < 3; ++i)
-        {
         for (int i = 0; i < 3; ++i)
         {
             float x = buttonNorms[i].x * fb.x;
@@ -191,19 +148,7 @@ class Menustate : public our::State
             float h = buttonNorms[i].w * fb.y;
             buttons[i].position = {x, y};
             buttons[i].size = {w, h};
-            buttons[i].position = {x, y};
-            buttons[i].size = {w, h};
         }
-        // Initialize sound system if not already initialized
-        SOUND_MANAGER->initialize();
-
-        // Load menu sounds
-        SOUND_MANAGER->loadSound("menu_click", "assets/sounds/ui/click.wav");
-
-        // Play menu background music
-        SOUND_MANAGER->playMusic("assets/sounds/music/suspense.wav", true);
-        SOUND_MANAGER->setMusicVolume(0.4f); // subtle background
-
         // Initialize sound system if not already initialized
         SOUND_MANAGER->initialize();
 
@@ -219,10 +164,7 @@ class Menustate : public our::State
 
     void onDraw(double deltaTime) override
     {
-    void onDraw(double deltaTime) override
-    {
         // Get a reference to the keyboard object
-        auto &keyboard = getApp()->getKeyboard();
         auto &keyboard = getApp()->getKeyboard();
 
         // Keyboard Interaction
@@ -239,7 +181,6 @@ class Menustate : public our::State
         }
 
         // Get a reference to the mouse object and get the current mouse position
-        auto &mouse = getApp()->getMouse();
         auto &mouse = getApp()->getMouse();
         glm::vec2 mousePosition = mouse.getMousePosition();
 
@@ -268,7 +209,6 @@ class Menustate : public our::State
         // so that the we can define our object locations and sizes in pixels.
         // Note that the top is at 0.0 and the bottom is at the framebuffer height. This allows us to consider the top-left
         // corner of the window to be the origin which makes dealing with the mouse input easier.
-        // corner of the window to be the origin which makes dealing with the mouse input easier.
         glm::mat4 VP = glm::ortho(0.0f, (float)size.x, (float)size.y, 0.0f, 1.0f, -1.0f);
         // The local to world (model) matrix of the background which is just a scaling matrix to make the menu cover the whole
         // window. Note that we defind the scale in pixels.
@@ -279,20 +219,12 @@ class Menustate : public our::State
 
         if (transitionOut)
         {
-
-        if (transitionOut)
-        {
             transitionTime += (float)deltaTime;
             menuMaterial->tint = glm::vec4(1.0f - glm::smoothstep(0.0f, 1.0f, transitionTime));
             if (transitionTime >= 1.0f)
             {
-            if (transitionTime >= 1.0f)
-            {
                 getApp()->changeState("loading");
             }
-        }
-        else
-        {
         }
         else
         {
@@ -303,7 +235,6 @@ class Menustate : public our::State
         // Notice that I don't clear the screen first, since I assume that the menu rectangle will draw over the whole
         // window anyway.
         menuMaterial->setup();
-        menuMaterial->shader->set("transform", VP * M);
         menuMaterial->shader->set("transform", VP * M);
         rectangle->draw();
 

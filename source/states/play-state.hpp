@@ -9,13 +9,13 @@
 #include <systems/physics-system.hpp>
 #include <systems/animation-system.hpp>
 #include <systems/weapon-system.hpp>
-#include <systems/weapon-system.hpp>
+
 #include <components/animator.hpp>
 #include <components/health.hpp>
-#include <components/health.hpp>
+
 #include <systems/zombie-system.hpp>
 #include <sound/sound-manager.hpp>
-#include <sound/sound-manager.hpp>
+
 #include <asset-loader.hpp>
 #include <fstream>
 #include <string>
@@ -24,10 +24,6 @@
 #include <mesh/mesh.hpp>
 
 // This state shows how to use the ECS framework and deserialization.
-namespace our
-{
-    class Playstate : public State
-    {
 namespace our
 {
     class Playstate : public State
@@ -885,22 +881,24 @@ namespace our
             // If Flash -> roundsCompleted AM.
             
             if (outcome == GameOutcome::Win) {
+                clockFlashTimer -= dt; // Decrement timer so the sequence progresses!
+
                 // RENDER 6 AM SCREEN (Solid)
-                clockMaterial->texture = our::AssetLoader<our::Texture2D>::get("time-6am");
-                if (clockMaterial->texture) {
-                    glm::mat4 MClock = glm::scale(glm::mat4(1.0f), glm::vec3((float)size.x, (float)size.y, 1.0f));
-                    clockMaterial->setup();
-                    clockMaterial->shader->set("tint", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)); // Opaque
-                    clockMaterial->shader->set("transform", VP*MClock);
-                    uiRectangle->draw();
+                if (clockFlashTimer > 0.0f) {
+                    clockMaterial->texture = our::AssetLoader<our::Texture2D>::get("time-6am");
+                    if (clockMaterial->texture) {
+                        glm::mat4 MClock = glm::scale(glm::mat4(1.0f), glm::vec3((float)size.x, (float)size.y, 1.0f));
+                        clockMaterial->setup();
+                        
+                        // Optional: Fade out in last second
+                        float alpha = 1.0f;
+                        if(clockFlashTimer < 1.0f) alpha = clockFlashTimer; 
+                        
+                        clockMaterial->shader->set("tint", glm::vec4(1.0f, 1.0f, 1.0f, alpha)); // Solid -> Fade
+                        clockMaterial->shader->set("transform", VP*MClock);
+                        uiRectangle->draw();
+                    }
                 }
-                
-                // Wait for the "Celebration" timer then exit
-                if (gameOverTimer <= 0.0f) {
-                     // getApp()->changeState("menu"); 
-                     // We let the ImGui overlay handle the exit now
-                }
-                
             } else if (clockFlashTimer > 0.0f) {
                 // HOURLY CHIME / NIGHT INTRO
                 clockFlashTimer -= dt;
@@ -1002,8 +1000,7 @@ namespace our
 
             // Get a reference to the keyboard object
             auto &keyboard = getApp()->getKeyboard();
-            // Get a reference to the keyboard object
-            auto &keyboard = getApp()->getKeyboard();
+
 
             if (keyboard.justPressed(GLFW_KEY_ESCAPE))
             {
@@ -1026,55 +1023,7 @@ namespace our
                 // We need to pass this. For now, let's just print it and realize we need to change how we draw.
                 // BUT, we can pause animation easily!
             }
-            if (keyboard.justPressed(GLFW_KEY_ESCAPE))
-            {
-                getApp()->changeState("menu");
-            }
 
-            // Disable/Enable Skinning (Diagnostic)
-            if (keyboard.justPressed(GLFW_KEY_K))
-            {
-                // Toggle global uniform or iterate entities?
-                // Simpler: Just toggle a static bool and send it
-                static bool skinningEnabled = true;
-                skinningEnabled = !skinningEnabled;
-                std::cout << "Skinning Enabled: " << skinningEnabled << std::endl;
-
-                // Hack: set it on the next draw via material or global uniform
-                // Since we can't easily access the shader directly here without iterating materials,
-                // let's iterate the world and set a property on the material if we could.
-                // Actually, skinned.vert uses a uniform 'useSkinning'.
-                // We need to pass this. For now, let's just print it and realize we need to change how we draw.
-                // BUT, we can pause animation easily!
-            }
-
-            // Pause/Play Animation (Diagnostic)
-            if (keyboard.justPressed(GLFW_KEY_P))
-            {
-                for (auto entity : world.getEntities())
-                {
-                    auto *animator = entity->getComponent<our::AnimatorComponent>();
-                    if (animator)
-                    {
-                        animator->isPlaying = !animator->isPlaying;
-                        std::cout << "Entity " << entity->name << " animation playing: " << animator->isPlaying << std::endl;
-                    }
-                }
-            }
-        }
-            // Pause/Play Animation (Diagnostic)
-            if (keyboard.justPressed(GLFW_KEY_P))
-            {
-                for (auto entity : world.getEntities())
-                {
-                    auto *animator = entity->getComponent<our::AnimatorComponent>();
-                    if (animator)
-                    {
-                        animator->isPlaying = !animator->isPlaying;
-                        std::cout << "Entity " << entity->name << " animation playing: " << animator->isPlaying << std::endl;
-                    }
-                }
-            }
         }
 
         void onImmediateGui() override
@@ -1201,17 +1150,5 @@ namespace our
             std::cout << "Playstate::onDestroy - End" << std::endl;
         }
     };
-}
-            // Clear the world (destroys entities and their components)
-            // BulletColliderComponent destructor will delete the rigid bodies
-            std::cout << "Playstate::onDestroy - Clearing World" << std::endl;
-            world.clear();
 
-            // and we delete all the loaded assets to free memory on the RAM and the VRAM
-            std::cout << "Playstate::onDestroy - Clearing Assets" << std::endl;
-            our::clearAllAssets();
-
-            std::cout << "Playstate::onDestroy - End" << std::endl;
-        }
-    };
 }
