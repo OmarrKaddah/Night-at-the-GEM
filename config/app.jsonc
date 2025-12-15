@@ -634,8 +634,8 @@
               "linear": 0.22,
               "quadratic": 0.11
             },
-            "inner_angle": 20.0,
-            "outer_angle": 30.0
+            "inner_angle": 10.0,
+            "outer_angle": 55.0
           }
         ],
         "children": [

@@ -64,18 +64,21 @@ vec3 calc_light(Light light, vec3 normal, vec3 view_dir, vec3 albedo, vec3 spec_
         float dist = length(light.position - fs_in.world_pos);
         attenuation = 1.0 / (light.constant + light.linear * dist + light.quadratic * dist * dist);
 
+        // Spotlight falloff - smooth circular cone with perfect falloff
         if (light.type == SPOT) {
             vec3 light_forward = normalize(-light.direction);
             float theta = dot(light_dir, light_forward);
             
-            // EXPLICIT FIXED: Kill any light projecting backwards
-            if (theta <= 0.0) {
-                 attenuation = 0.0;
-            } else {
-                float epsilon = light.inner_angle - light.outer_angle;
-                float intensity = clamp((theta - light.outer_angle) / epsilon, 0.0, 1.0);
-                attenuation *= intensity;
-            }
+            // Clamp theta to valid range [0, 1] to prevent any artifacts
+            theta = max(theta, 0.0);
+            
+            // Standard spotlight falloff using smoothstep for perfectly smooth transitions
+            // inner_angle and outer_angle are stored as cos(angle)
+            // Use smoothstep for perfectly smooth falloff with no discontinuities
+            float intensity = smoothstep(light.outer_angle, light.inner_angle, theta);
+            
+            // Apply smooth falloff to attenuation
+            attenuation *= intensity;
         }
     }
 
@@ -93,7 +96,14 @@ vec3 calc_light(Light light, vec3 normal, vec3 view_dir, vec3 albedo, vec3 spec_
     vec3 specular = spec * spec_color * 0.7;
 
     // More realistic light contribution with distance-based intensity
-    return (diffuse + specular) * light.color * attenuation;
+    vec3 lightContribution = (diffuse + specular) * light.color * attenuation;
+    
+    // Boost intensity for spotlights (flashlights) to make them brighter
+    if (light.type == SPOT) {
+        lightContribution *= 2.0; // Increase flashlight brightness
+    }
+    
+    return lightContribution;
 }
 
 void main() {
@@ -140,52 +150,59 @@ void main() {
     float shadow = 1.0;
 
     if (use_shadows == 1 && flashlight_index >= 0 && flashlight_index < light_count && lights[flashlight_index].type == SPOT) {
-        // Transform fragment position to light space
-        vec4 fragPosLightSpace = light_space_matrix * vec4(fs_in.world_pos, 1.0);
+        // First check if fragment is within the spotlight cone before shadow testing
+        vec3 light_dir_check = normalize(lights[flashlight_index].position - fs_in.world_pos);
+        vec3 light_forward_check = normalize(-lights[flashlight_index].direction);
+        float theta_check = dot(light_dir_check, light_forward_check);
+        
+        // Only test shadows if fragment is within the spotlight cone
+        if (theta_check > lights[flashlight_index].outer_angle) {
+            // Transform fragment position to light space
+            vec4 fragPosLightSpace = light_space_matrix * vec4(fs_in.world_pos, 1.0);
 
-        // Check if behind the light (w < 0 means behind)
-        if (fragPosLightSpace.w > 0.0) {
-            // Perspective divide
-            vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-            // Transform to [0,1] range
-            projCoords = projCoords * 0.5 + 0.5;
+            // Check if behind the light (w < 0 means behind)
+            if (fragPosLightSpace.w > 0.0) {
+                // Perspective divide
+                vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+                // Transform to [0,1] range
+                projCoords = projCoords * 0.5 + 0.5;
 
-            // Check if fragment is in shadow map bounds
-            if (projCoords.x >= 0.0 && projCoords.x <= 1.0 && 
-                projCoords.y >= 0.0 && projCoords.y <= 1.0 &&
-                projCoords.z >= 0.0 && projCoords.z <= 1.0) {
+                // Check if fragment is in shadow map bounds with margin to prevent edge artifacts
+                if (projCoords.x >= 0.0 && projCoords.x <= 1.0 && 
+                    projCoords.y >= 0.0 && projCoords.y <= 1.0 &&
+                    projCoords.z >= 0.0 && projCoords.z <= 1.0) {
 
-                // Sample shadow map depth (stored in red channel)
-                float closestDepth = texture(shadow_map, projCoords.xy).r;
-                float currentDepth = projCoords.z;
+                    // Sample shadow map depth (stored in red channel)
+                    float currentDepth = projCoords.z;
+                    
+                    // Improved shadow bias - larger bias to prevent shadow acne artifacts
+                    vec3 light_dir_shadow = normalize(lights[flashlight_index].position - fs_in.world_pos);
+                    float NdotL = max(dot(normal, light_dir_shadow), 0.0);
+                    // Larger bias with slope scaling to prevent artifacts
+                    float bias = 0.008 * (1.0 - NdotL);
+                    bias = max(bias, 0.004); // Minimum bias to prevent precision issues
 
-                // TEMPORARY DEBUG: Visualize shadow map to verify it's working
-                // Uncomment the next 2 lines to see the shadow map as a gradient
-                // If you see a gradient pattern, the shadow map IS working!
-                // frag_color = vec4(closestDepth, closestDepth, closestDepth, 1.0);
-                // return;
-
-                // Also try visualizing currentDepth to see if coordinates are correct
-                // frag_color = vec4(currentDepth, currentDepth, currentDepth, 1.0);
-                // return;
-
-                // Shadow bias to prevent shadow acne
-                float bias = 0.005;
-
-                // Check if current fragment is in shadow
-                if (closestDepth < 0.999) {
-                    // There's something in the shadow map at this location
-                    if (currentDepth > closestDepth + bias) {
-                        // We're behind that something = in shadow
-                        shadow = 0.2; // Dark shadow but not completely black
+                    // Sample shadow map
+                    float closestDepth = texture(shadow_map, projCoords.xy).r;
+                    
+                    // Simple, reliable shadow comparison with bias
+                    // If current fragment is closer to light than shadow map, it's lit
+                    if (currentDepth - bias <= closestDepth) {
+                        shadow = 1.0;
                     } else {
-                        shadow = 1.0; // Not in shadow
+                        shadow = 0.0;
                     }
                 } else {
-                    // Empty space in shadow map = not in shadow
+                    // Outside shadow map bounds - treat as lit to prevent dark edges
                     shadow = 1.0;
                 }
+            } else {
+                // Behind the light - no shadow
+                shadow = 1.0;
             }
+        } else {
+            // Outside spotlight cone - no shadow test needed, will be dark from spotlight falloff
+            shadow = 1.0;
         }
     }
 
