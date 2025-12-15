@@ -51,6 +51,7 @@ uniform sampler2D shadow_map;
 uniform mat4 light_space_matrix;
 uniform int use_shadows;
 uniform int flashlight_index;
+uniform float time; // Time for flickering effects (defaults to 0.0 if not set)
 
 // Calculate light contribution
 vec3 calc_light(Light light, vec3 normal, vec3 view_dir, vec3 albedo, vec3 spec_color, float rough) {
@@ -100,7 +101,37 @@ vec3 calc_light(Light light, vec3 normal, vec3 view_dir, vec3 albedo, vec3 spec_
     
     // Boost intensity for spotlights (flashlights) to make them brighter
     if (light.type == SPOT) {
-        lightContribution *= 2.0; // Increase flashlight brightness
+        lightContribution *= 0.75; // Increase flashlight brightness
+    }
+    
+    // Add strobe effect for point lights (lamps) - 4s off, 0.05s on, 0.05s off, 0.05s on, repeat
+    if (light.type == POINT) {
+        float strobe = 0.0; // Default to OFF
+        
+        // Only calculate strobe if time is actually set (greater than a small epsilon)
+        // This prevents the light from being always on when time defaults to 0
+        if (time > 0.001) {
+            // Total cycle: 4.15 seconds (4s off + 0.05s on + 0.05s off + 0.05s on)
+            float cycleLength = 4.15;
+            float cyclePosition = mod(time, cycleLength);
+            
+            // Pattern:
+            // 0.0 to 4.0: OFF
+            // 4.0 to 4.05: ON
+            // 4.05 to 4.1: OFF
+            // 4.1 to 4.15: ON
+            if (cyclePosition < 4.0) {
+                strobe = 0.0; // OFF for first 4 seconds
+            } else if (cyclePosition < 4.05) {
+                strobe = 1.0; // ON for 0.05 seconds
+            } else if (cyclePosition < 4.1) {
+                strobe = 0.0; // OFF for 0.05 seconds
+            } else {
+                strobe = 1.0; // ON for 0.05 seconds
+            }
+        }
+        
+        lightContribution *= strobe;
     }
     
     return lightContribution;

@@ -3,6 +3,7 @@
 #include "../texture/texture-utils.hpp"
 #include "../components/animator.hpp"
 #include "../material/material.hpp"
+#include <GLFW/glfw3.h>
 #include <iostream>
 
 namespace our {
@@ -455,18 +456,8 @@ namespace our {
                         
                         matToUse->shader->set("camera_pos", cameraPos);
                         matToUse->shader->set("ambient_light", glm::vec3(0.02f, 0.02f, 0.02f));
-                        
-                        // Send shadow map data
-                        if (shadowMap && flashlightIndex >= 0) {
-                            glActiveTexture(GL_TEXTURE5);
-                            shadowMap->bind();
-                            matToUse->shader->set("shadow_map", 5);
-                            matToUse->shader->set("light_space_matrix", lightSpaceMatrix);
-                            matToUse->shader->set("use_shadows", 1);
-                            matToUse->shader->set("flashlight_index", flashlightIndex);
-                        } else {
-                            matToUse->shader->set("use_shadows", 0);
-                        }
+                        // Set time for flickering effects
+                        matToUse->shader->set("time", (float)glfwGetTime());
                     }
 
                     // OPTIMIZED SKINNING DATA
@@ -523,18 +514,8 @@ namespace our {
                     
                     cmd.material->shader->set("camera_pos", cameraPos);
                     cmd.material->shader->set("ambient_light", glm::vec3(0.02f, 0.02f, 0.02f));
-                    
-                    // Send shadow map data
-                    if (shadowMap && flashlightIndex >= 0) {
-                        glActiveTexture(GL_TEXTURE5);
-                        shadowMap->bind();
-                        cmd.material->shader->set("shadow_map", 5);
-                        cmd.material->shader->set("light_space_matrix", lightSpaceMatrix);
-                        cmd.material->shader->set("use_shadows", 1);
-                        cmd.material->shader->set("flashlight_index", flashlightIndex);
-                    } else {
-                        cmd.material->shader->set("use_shadows", 0);
-                    }
+                    // Set time for flickering effects
+                    cmd.material->shader->set("time", (float)glfwGetTime());
                 }
 
                 if (cmd.animator && !cmd.animator->boneTransforms.empty()) {
@@ -754,7 +735,4 @@ namespace our {
             }
         }
     }
-
-
-
 }
