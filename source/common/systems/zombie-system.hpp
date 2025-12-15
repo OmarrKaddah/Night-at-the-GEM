@@ -317,6 +317,12 @@ namespace our
                         if (grid)
                         {
                             state.path = pathfinder.findPath(zombiePos, playerPos, grid);
+                            
+                            // Fallback: if pathfinding failed, move directly toward player
+                            if (state.path.empty())
+                            {
+                                state.path.push_back(playerPos);
+                            }
                         }
                     }
                     else
@@ -355,6 +361,12 @@ namespace our
                                 }
                             }
                         }
+                    }
+
+                    // UNIVERSAL FALLBACK: If path is still empty after all logic, move directly to player
+                    if (state.path.empty())
+                    {
+                        state.path.push_back(playerPos);
                     }
 
                     state.pathIndex = 0;

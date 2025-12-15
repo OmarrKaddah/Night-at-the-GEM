@@ -46,7 +46,19 @@ public:
         glm::ivec2 startCell = grid->worldToGrid(start);
         glm::ivec2 goalCell = grid->worldToGrid(goal);
         
-        // Snap to nearest walkable cell if needed
+        glm::ivec2 gridSize = grid->getGridSize();
+
+        // Clamp to grid bounds to handle out-of-bounds positions gracefully
+        auto clampToGrid = [&](glm::ivec2 p) {
+            p.x = std::max(0, std::min(p.x, gridSize.x - 1));
+            p.y = std::max(0, std::min(p.y, gridSize.y - 1));
+            return p;
+        };
+
+        startCell = clampToGrid(startCell);
+        goalCell = clampToGrid(goalCell);
+        
+        // Snap to nearest walkable cell if needed (e.g. if clamped position is an obstacle)
         if (!grid->isWalkable(startCell.x, startCell.y)) {
             startCell = findNearestWalkable(startCell, grid, 5);
         }
