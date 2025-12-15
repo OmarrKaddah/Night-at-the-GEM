@@ -17,7 +17,7 @@ private:
 
     float musicVolume = 1.0f;
     float sfxVolume   = 1.0f;
-
+    
     std::unordered_map<std::string, std::string> soundPaths;
 
     SoundManager() = default;

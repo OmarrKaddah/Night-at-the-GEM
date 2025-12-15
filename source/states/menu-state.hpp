@@ -57,6 +57,7 @@ class Menustate : public our::State
     bool transitionOut = false;
     float transitionTime = 0.0f;
     int focusedButton = 0;
+bool soundMuted = false;
 
     void onInitialize() override
     {
@@ -134,8 +135,19 @@ class Menustate : public our::State
         buttons[0].action = [this]()
         { this->transitionOut = true; };
         buttons[1].action = [this]()
-        { std::cout << "Options selected" << std::endl; };
-        buttons[2].action = [this]()
+{
+        soundMuted = !soundMuted;
+
+    if (soundMuted) {
+        SOUND_MANAGER->setMusicVolume(0.0f);
+        SOUND_MANAGER->setSFXVolume(0.0f);
+        std::cout << "[Options] Sound MUTED\n";
+    } else {
+        SOUND_MANAGER->setMusicVolume(0.4f);
+        SOUND_MANAGER->setSFXVolume(1.0f);
+        std::cout << "[Options] Sound UNMUTED\n";
+    }
+};        buttons[2].action = [this]()
         { this->getApp()->close(); };
 
         // Convert normalized rects to pixel coordinates based on the current framebuffer size
@@ -158,6 +170,9 @@ class Menustate : public our::State
         // Play menu background music
         SOUND_MANAGER->playMusic("assets/sounds/music/suspense.wav", true);
         SOUND_MANAGER->setMusicVolume(0.4f); // subtle background
+        SOUND_MANAGER->playMusic("assets/sounds/music/suspense.wav", true);
+        SOUND_MANAGER->setSFXVolume(1.0f);
+        soundMuted = false;
 
         std::cout << "Menustate::onInitialize - End" << std::endl;
     }
