@@ -57,7 +57,8 @@ class Menustate : public our::State
     bool transitionOut = false;
     float transitionTime = 0.0f;
     int focusedButton = 0;
-bool soundMuted = false;
+    static bool soundMuted; // Static to persist across MenuState instances
+
 
     void onInitialize() override
     {
@@ -169,10 +170,16 @@ bool soundMuted = false;
 
         // Play menu background music
         SOUND_MANAGER->playMusic("assets/sounds/music/suspense.wav", true);
-        SOUND_MANAGER->setMusicVolume(0.4f); // subtle background
-        SOUND_MANAGER->playMusic("assets/sounds/music/suspense.wav", true);
-        SOUND_MANAGER->setSFXVolume(1.0f);
-        soundMuted = false;
+        
+        // Apply persisted mute state
+        if (soundMuted) {
+            SOUND_MANAGER->setMusicVolume(0.0f);
+            SOUND_MANAGER->setSFXVolume(0.0f);
+        } else {
+            SOUND_MANAGER->setMusicVolume(0.4f);
+            SOUND_MANAGER->setSFXVolume(1.0f);
+        }
+
 
         std::cout << "Menustate::onInitialize - End" << std::endl;
     }
@@ -273,3 +280,6 @@ bool soundMuted = false;
         delete highlightMaterial;
     }
 };
+
+// Static member definition
+bool Menustate::soundMuted = false;
