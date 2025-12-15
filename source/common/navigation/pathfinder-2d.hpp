@@ -46,7 +46,15 @@ public:
         glm::ivec2 startCell = grid->worldToGrid(start);
         glm::ivec2 goalCell = grid->worldToGrid(goal);
         
-        // Check if start/goal are walkable
+        // Snap to nearest walkable cell if needed
+        if (!grid->isWalkable(startCell.x, startCell.y)) {
+            startCell = findNearestWalkable(startCell, grid, 5);
+        }
+        if (!grid->isWalkable(goalCell.x, goalCell.y)) {
+            goalCell = findNearestWalkable(goalCell, grid, 5);
+        }
+
+        // Check if start/goal are walkable (after snapping)
         if (!grid->isWalkable(startCell.x, startCell.y) || 
             !grid->isWalkable(goalCell.x, goalCell.y)) {
             return {};
@@ -108,6 +116,38 @@ private:
         return static_cast<float>(std::abs(a.x - b.x) + std::abs(a.y - b.y));
     }
     
+    // BFS to find nearest walkable cell within radius
+    glm::ivec2 findNearestWalkable(glm::ivec2 start, const NavGrid2D* grid, int maxRadius) const {
+        if (grid->isWalkable(start.x, start.y)) return start;
+
+        std::queue<glm::ivec2> q;
+        q.push(start);
+        std::unordered_set<glm::ivec2, IVec2Hash> visited;
+        visited.insert(start);
+
+        while (!q.empty()) {
+            glm::ivec2 current = q.front();
+            q.pop();
+
+            if (grid->isWalkable(current.x, current.y)) return current;
+
+            // Stop if too far from original search center
+            // (Using Manhattan distance for simplicity in check)
+            if (std::abs(current.x - start.x) > maxRadius || std::abs(current.y - start.y) > maxRadius) continue;
+
+            // Neighbors (4-way)
+            glm::ivec2 dirs[] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
+            for (const auto& d : dirs) {
+                glm::ivec2 next = current + d;
+                if (visited.find(next) == visited.end()) {
+                    visited.insert(next);
+                    q.push(next);
+                }
+            }
+        }
+        return start; // Failed, return original
+    }
+
     // Reconstruct path from goal to start
     std::vector<glm::vec3> reconstructPath(
         const std::unordered_map<glm::ivec2, PathNode, IVec2Hash>& nodeMap,

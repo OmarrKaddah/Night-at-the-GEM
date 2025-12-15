@@ -262,31 +262,34 @@ namespace our
                             state.path = pathfinder.findPath(zombiePos, playerPos, grid);
                         }
                     } else {
-                        // Different floors OR someone in stair zone: Use zone-based navigation
+                        // Different floors OR someone in stair zone: Use generic stair navigation
                         state.path.clear();
                         
-                        // Floor 0 -> 1: Middle stairs to mid-landing, then choose left/right
-                        if (zombieFloor == 0 && playerFloor == 1) {
-                            glm::vec3 midLandingPos = glm::vec3(0.02, 0.73, 25.2);
-                            glm::vec2 zombieFlat = glm::vec2(zombiePos.x, zombiePos.z);
-                            glm::vec2 midLandingFlat = glm::vec2(midLandingPos.x, midLandingPos.z);
-                            float distToMidLanding = glm::distance(zombieFlat, midLandingFlat);
+                        // Determine immediate next floor needed
+                        int nextFloor = zombieFloor;
+                        if (playerFloor > zombieFloor) nextFloor = zombieFloor + 1;
+                        else if (playerFloor < zombieFloor) nextFloor = zombieFloor - 1;
+                        
+                        // If same floor (but in stair zone), just try to reach player floor or keep going depending on zone
+                        // Actually if same floor but in stair zone, 'nextFloor' would be same.
+                        // But findNearestStair expects a target floor. 
+                        // If we are in stair zone, we are likely transitioning.
+                        // Ideally we target playerFloor.
+                        
+                        if (nextFloor == zombieFloor) nextFloor = playerFloor;
+
+                        StairWaypoint* stair = findNearestStair(zombiePos, nextFloor);
+                        
+                        if (stair) {
+                            // Add initial waypoint
+                            state.path.push_back(stair->position);
                             
-                            bool atMidLandingHeight = (zombiePos.y > 0.15f);
-                            bool passedMidLanding = (zombiePos.z > 25.0f);
-                            
-                            if ((distToMidLanding > 1.0f || !atMidLandingHeight) && !passedMidLanding) {
-                                state.path.push_back(midLandingPos);
-                            } else {
-                                if (playerPos.x < 0) {
-                                    state.path.push_back(glm::vec3(-2.0, 0.73, 25.2));
-                                    state.path.push_back(glm::vec3(-2.8, 1.2, 25.6));
-                                    state.path.push_back(glm::vec3(-3.5, 1.8, 25.6));
-                                } else {
-                                    state.path.push_back(glm::vec3(2.0, 0.73, 25.2));
-                                    state.path.push_back(glm::vec3(2.8, 1.2, 25.6));
-                                    state.path.push_back(glm::vec3(3.5, 1.8, 25.6));
-                                }
+                            // Follow the chain
+                            int currentIdx = stair->next;
+                            int safety = 0;
+                            while(currentIdx != -1 && currentIdx >= 0 && currentIdx < (int)stairWaypoints.size() && safety++ < 10) {
+                                state.path.push_back(stairWaypoints[currentIdx].position);
+                                currentIdx = stairWaypoints[currentIdx].next;
                             }
                         }
                     }
