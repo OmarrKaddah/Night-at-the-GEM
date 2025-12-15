@@ -1038,7 +1038,7 @@ namespace our
             ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
                                      ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs;
             ImGui::Begin("HUD", nullptr, flags);
-            ImGui::SetWindowFontScale(1.6f);
+            ImGui::SetWindowFontScale(2.5f);
             ImGui::Text("Night: %d/%d", currentNight, totalNightsToWin);
             ImGui::Text("Time: %d AM", currentHour == 0 ? 12 : currentHour); // Handle 0 if happens
             ImGui::Text("Kills: %d", kills);
