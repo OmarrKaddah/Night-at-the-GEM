@@ -9,9 +9,12 @@
 #include <systems/physics-system.hpp>
 #include <systems/animation-system.hpp>
 #include <systems/weapon-system.hpp>
+#include <systems/weapon-system.hpp>
 #include <components/animator.hpp>
 #include <components/health.hpp>
+#include <components/health.hpp>
 #include <systems/zombie-system.hpp>
+#include <sound/sound-manager.hpp>
 #include <sound/sound-manager.hpp>
 #include <asset-loader.hpp>
 #include <fstream>
@@ -21,6 +24,10 @@
 #include <mesh/mesh.hpp>
 
 // This state shows how to use the ECS framework and deserialization.
+namespace our
+{
+    class Playstate : public State
+    {
 namespace our
 {
     class Playstate : public State
@@ -280,7 +287,7 @@ namespace our
         isWin = false;
         healthRegenCooldown = 0.0f;
 
-        // Create UI Rectangle (1x1)
+            // Create UI Rectangle (1x1)
 
 
             if (!uiRectangle)
@@ -301,6 +308,20 @@ namespace our
                                             });
             }
 
+            // Create Health Materials
+            if (!healthBarMaterial)
+            {
+                healthBarMaterial = new our::TintedMaterial();
+                healthBarMaterial->shader = new our::ShaderProgram();
+                healthBarMaterial->shader->attach("assets/shaders/tinted.vert", GL_VERTEX_SHADER);
+                healthBarMaterial->shader->attach("assets/shaders/tinted.frag", GL_FRAGMENT_SHADER);
+                healthBarMaterial->shader->link();
+                healthBarMaterial->tint = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);   // Red
+                healthBarMaterial->pipelineState.depthTesting.enabled = false; // Always on top
+                healthBarMaterial->pipelineState.blending.enabled = true;
+                healthBarMaterial->pipelineState.blending.sourceFactor = GL_SRC_ALPHA;
+                healthBarMaterial->pipelineState.blending.destinationFactor = GL_ONE_MINUS_SRC_ALPHA;
+            }
             // Create Health Materials
             if (!healthBarMaterial)
             {
@@ -355,6 +376,122 @@ namespace our
 
             // Lock mouse on startup
 
+            if (gameplayActive)
+                for (auto entity : world.getEntities())
+                {
+                    auto *collider = entity->getComponent<our::BulletColliderComponent>();
+                    auto *camera = entity->getComponent<our::CameraComponent>();
+                    // Only apply mouse rotation to entities with a camera
+                    if (collider && collider->mass > 0.0f && collider->rigidBody && camera)
+                    {
+                        // Handle mouse rotation (always active now)
+                        glm::vec2 delta = mouse.getMouseDelta();
+                        if (first_frame)
+                        {
+                            delta = glm::vec2(0.0f);
+                            first_frame = false;
+                        }
+
+                        // Deadzone to prevent drift
+                        if (glm::length(delta) < 10.0f)
+                            delta = glm::vec2(0.0f);
+
+                        glm::vec3 rotation = entity->localTransform.rotation;
+                        float lookSensitivity = 0.01f;
+                        if (weaponSystem.isAiming())
+                            lookSensitivity *= 0.5f;
+                        rotation.x -= delta.y * lookSensitivity;
+                        rotation.y -= delta.x * lookSensitivity;
+
+                        // Clamp pitch to prevent flipping
+                        if (rotation.x < -glm::half_pi<float>() * 0.99f)
+                            rotation.x = -glm::half_pi<float>() * 0.99f;
+                        if (rotation.x > glm::half_pi<float>() * 0.99f)
+                            rotation.x = glm::half_pi<float>() * 0.99f;
+                        entity->localTransform.rotation = rotation;
+
+                        // Sync rotation to physics body MANUALLY to avoid resetting linear velocity (which breaks gravity)
+                        // collider->syncFromEntity(); // This was causing the issue because it zeroes velocity!
+
+                        btTransform trans = collider->rigidBody->getWorldTransform();
+
+                        // Only sync Y-rotation (Yaw) to physics body so the capsule stays upright!
+                        // If we pitch the capsule (look down), it will tip over and 'orbit'/'drift'.
+                        glm::vec3 eulerRot = entity->localTransform.rotation;
+                        glm::quat yawQuat = glm::quat(glm::vec3(0, eulerRot.y, 0));
+
+                        trans.setRotation(btQuaternion(yawQuat.x, yawQuat.y, yawQuat.z, yawQuat.w));
+                        collider->rigidBody->setWorldTransform(trans);
+                        if (collider->rigidBody->getMotionState())
+                        {
+                            collider->rigidBody->getMotionState()->setWorldTransform(trans);
+                        }
+
+                        glm::vec3 velocity(0, 0, 0);
+                        float speed = 5.0f;
+
+                        // Get camera direction
+                        glm::mat4 matrix = entity->localTransform.toMat4();
+                        glm::vec3 forward = glm::vec3(matrix * glm::vec4(0, 0, -1, 0));
+                        glm::vec3 right = glm::vec3(matrix * glm::vec4(1, 0, 0, 0));
+
+                        // WASD movement
+                        if (kb.isPressed(GLFW_KEY_W))
+                            velocity += forward * speed;
+                        if (kb.isPressed(GLFW_KEY_S))
+                            velocity -= forward * speed;
+                        if (kb.isPressed(GLFW_KEY_D))
+                            velocity += right * speed;
+                        if (kb.isPressed(GLFW_KEY_A))
+                            velocity -= right * speed;
+
+                        // Footstep sounds
+                        bool isMoving = glm::length(glm::vec2(velocity.x, velocity.z)) > 0.1f;
+
+                        if (isMoving)
+                        {
+                            // FIRST STEP → play immediately
+                            if (!wasMoving)
+                            {
+                                SOUND_MANAGER->playSound("footstep_default");
+                                footstepTimer = footstepInterval;
+                            }
+                            else
+                            {
+                                footstepTimer -= dt;
+                                if (footstepTimer <= 0.0f)
+                                {
+                                    SOUND_MANAGER->playSound("footstep_default");
+                                    footstepTimer = footstepInterval;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            footstepTimer = 0.0f;
+                        }
+
+                        wasMoving = isMoving;
+
+                        // Apply velocity to physics (gravity handles Y)
+                        collider->rigidBody->setLinearVelocity(btVector3(velocity.x, collider->rigidBody->getLinearVelocity().y(), velocity.z));
+                        collider->rigidBody->activate();
+                    }
+                }
+
+            // Run other systems (but NOT camera controller - we handle movement with physics)
+            // movementSystem.update(&world, (float)deltaTime); // DISABLED: overwrites physics velocity!
+            // cameraController.update(&world, (float)deltaTime); // DISABLED
+
+            // Update Zombie AI
+            if (gameplayActive)
+            {
+                weaponSystem.update(&world, dt);
+                zombieSystem.update(&world, dt);
+            }
+
+            // Update animations (Calculate bone positions)
+            animationSystem.update(&world, dt);
             if (gameplayActive)
                 for (auto entity : world.getEntities())
                 {
@@ -865,6 +1002,8 @@ namespace our
 
             // Get a reference to the keyboard object
             auto &keyboard = getApp()->getKeyboard();
+            // Get a reference to the keyboard object
+            auto &keyboard = getApp()->getKeyboard();
 
             if (keyboard.justPressed(GLFW_KEY_ESCAPE))
             {
@@ -887,7 +1026,42 @@ namespace our
                 // We need to pass this. For now, let's just print it and realize we need to change how we draw.
                 // BUT, we can pause animation easily!
             }
+            if (keyboard.justPressed(GLFW_KEY_ESCAPE))
+            {
+                getApp()->changeState("menu");
+            }
 
+            // Disable/Enable Skinning (Diagnostic)
+            if (keyboard.justPressed(GLFW_KEY_K))
+            {
+                // Toggle global uniform or iterate entities?
+                // Simpler: Just toggle a static bool and send it
+                static bool skinningEnabled = true;
+                skinningEnabled = !skinningEnabled;
+                std::cout << "Skinning Enabled: " << skinningEnabled << std::endl;
+
+                // Hack: set it on the next draw via material or global uniform
+                // Since we can't easily access the shader directly here without iterating materials,
+                // let's iterate the world and set a property on the material if we could.
+                // Actually, skinned.vert uses a uniform 'useSkinning'.
+                // We need to pass this. For now, let's just print it and realize we need to change how we draw.
+                // BUT, we can pause animation easily!
+            }
+
+            // Pause/Play Animation (Diagnostic)
+            if (keyboard.justPressed(GLFW_KEY_P))
+            {
+                for (auto entity : world.getEntities())
+                {
+                    auto *animator = entity->getComponent<our::AnimatorComponent>();
+                    if (animator)
+                    {
+                        animator->isPlaying = !animator->isPlaying;
+                        std::cout << "Entity " << entity->name << " animation playing: " << animator->isPlaying << std::endl;
+                    }
+                }
+            }
+        }
             // Pause/Play Animation (Diagnostic)
             if (keyboard.justPressed(GLFW_KEY_P))
             {
@@ -1015,6 +1189,19 @@ namespace our
         std::cout << "Playstate::onDestroy - Destroying Zombie System" << std::endl;
         zombieSystem.destroy();
 
+            // Clear the world (destroys entities and their components)
+            // BulletColliderComponent destructor will delete the rigid bodies
+            std::cout << "Playstate::onDestroy - Clearing World" << std::endl;
+            world.clear();
+
+            // and we delete all the loaded assets to free memory on the RAM and the VRAM
+            std::cout << "Playstate::onDestroy - Clearing Assets" << std::endl;
+            our::clearAllAssets();
+
+            std::cout << "Playstate::onDestroy - End" << std::endl;
+        }
+    };
+}
             // Clear the world (destroys entities and their components)
             // BulletColliderComponent destructor will delete the rigid bodies
             std::cout << "Playstate::onDestroy - Clearing World" << std::endl;

@@ -4,6 +4,7 @@
 #include "../components/animator.hpp"
 #include "../components/bullet-collider.hpp"
 #include "../components/health.hpp"
+#include "../components/health.hpp"
 #include "../navigation/nav-grid-2d.hpp"
 #include "../navigation/pathfinder-2d.hpp"
 #include <glm/glm.hpp>
@@ -32,6 +33,12 @@ namespace our
 
     public:
             struct ZombieState {
+
+
+        float respawnDelaySeconds = 10.0f;
+
+    public:
+            struct ZombieState {
             std::vector<glm::vec3> path;
             size_t pathIndex = 0;
             float pathTimer = 0.0f;
@@ -47,9 +54,26 @@ namespace our
 
             float soundTimer = 0.0f;      // Timer for ambient growls
             float attackSoundCooldown = 0.0f; // Cooldown for attack sounds
+            bool dead = false;
+            float respawnTimer = 0.0f;
+
+            bool spawnSaved = false;
+            glm::vec3 spawnPosition = glm::vec3(0);
+            glm::vec3 spawnRotation = glm::vec3(0);
+            glm::vec3 spawnScale = glm::vec3(1);
+
+            float soundTimer = 0.0f;      // Timer for ambient growls
+            float attackSoundCooldown = 0.0f; // Cooldown for attack sounds
         };
         
+        
         std::unordered_map<Entity*, ZombieState> states;
+
+        void setRespawnDelaySeconds(float seconds) {
+            respawnDelaySeconds = (seconds < 0.5f) ? 0.5f : seconds;
+        }
+        [[nodiscard]] float getRespawnDelaySeconds() const { return respawnDelaySeconds; }
+
 
         void setRespawnDelaySeconds(float seconds) {
             respawnDelaySeconds = (seconds < 0.5f) ? 0.5f : seconds;
@@ -403,6 +427,15 @@ namespace our
                 }
                 
                 // Animation
+                if(auto* animator = entity->getComponent<AnimatorComponent>()) {
+                    // If a non-looping animation is currently playing (e.g., hit), don't overwrite it.
+                    if(animator->isPlaying && !animator->loop) {
+                        continue;
+                    }
+                    // Otherwise, keep the zombie in the walk loop.
+                    if(animator->currentAnimation != "walk" || !animator->isPlaying || !animator->loop) {
+                        animator->playAnimation("walk", true);
+                    }
                 if(auto* animator = entity->getComponent<AnimatorComponent>()) {
                     // If a non-looping animation is currently playing (e.g., hit), don't overwrite it.
                     if(animator->isPlaying && !animator->loop) {
