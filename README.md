@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="banner.png" alt="Night at the GEM Banner" />
+  <img src="banner-1.webp" alt="Night at the GEM Banner" />
 </p>
 
 # Night at the GEM  
