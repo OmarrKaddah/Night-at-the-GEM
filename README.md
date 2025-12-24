@@ -113,5 +113,22 @@ This system enables fluid character movement while remaining tightly integrated 
 
 ---
 
-## Project Structure
+
+---
+
+## Build & Run
+
+### Requirements
+- C++17 compatible compiler  
+- OpenGL 3.3+  
+- GLFW, GLM, Assimp  
+- CMake  
+
+### Build
+```bash
+mkdir build
+cd build
+cmake ..
+make
+
 
