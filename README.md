@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="banner-1.webp" alt="Night at the GEM Banner" />
+  <img src="banner-1.webp" alt="Night at the Hintze Hall Banner" />
 </p>
 
-# Night at the GEM  
+# Night at the Hintze Hall 
 ### Custom Real-Time 3D Graphics Engine & Interactive Experience
 
 **Night at the GEM** is a real-time 3D interactive application powered by a **fully custom-built graphics engine** developed in C++ using modern OpenGL.  
